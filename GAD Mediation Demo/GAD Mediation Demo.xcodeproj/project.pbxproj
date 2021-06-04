@@ -13,6 +13,13 @@
 		5A2D76942669695600186187 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5A2D76922669695600186187 /* Main.storyboard */; };
 		5A2D76962669695A00186187 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5A2D76952669695A00186187 /* Assets.xcassets */; };
 		5A2D76992669695A00186187 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5A2D76972669695A00186187 /* LaunchScreen.storyboard */; };
+		5A2D76A12669806000186187 /* Banner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2D76A02669806000186187 /* Banner.swift */; };
+		5A2D76A32669807100186187 /* MRect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2D76A22669807100186187 /* MRect.swift */; };
+		5A2D76A52669808800186187 /* Interstitial.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2D76A42669808800186187 /* Interstitial.swift */; };
+		5A2D76A72669809500186187 /* Rewarded.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2D76A62669809500186187 /* Rewarded.swift */; };
+		5A2D76A92669809F00186187 /* Native.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2D76A82669809F00186187 /* Native.swift */; };
+		5A2D76AC2669829200186187 /* GADMediation.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5A2D76AB2669829200186187 /* GADMediation.storyboard */; };
+		5A2D76AF2669A2A100186187 /* NativeView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5A2D76AE2669A2A100186187 /* NativeView.xib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +32,13 @@
 		5A2D76952669695A00186187 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5A2D76982669695A00186187 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		5A2D769A2669695A00186187 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5A2D76A02669806000186187 /* Banner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Banner.swift; sourceTree = "<group>"; };
+		5A2D76A22669807100186187 /* MRect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MRect.swift; sourceTree = "<group>"; };
+		5A2D76A42669808800186187 /* Interstitial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Interstitial.swift; sourceTree = "<group>"; };
+		5A2D76A62669809500186187 /* Rewarded.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rewarded.swift; sourceTree = "<group>"; };
+		5A2D76A82669809F00186187 /* Native.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Native.swift; sourceTree = "<group>"; };
+		5A2D76AB2669829200186187 /* GADMediation.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = GADMediation.storyboard; sourceTree = "<group>"; };
+		5A2D76AE2669A2A100186187 /* NativeView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = NativeView.xib; sourceTree = "<group>"; };
 		6635390D553AE00FB53D5F88 /* Pods-GAD Mediation Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GAD Mediation Demo.release.xcconfig"; path = "Target Support Files/Pods-GAD Mediation Demo/Pods-GAD Mediation Demo.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -63,12 +77,35 @@
 			children = (
 				5A2D768C2669695600186187 /* AppDelegate.swift */,
 				5A2D768E2669695600186187 /* SceneDelegate.swift */,
-				5A2D76922669695600186187 /* Main.storyboard */,
+				5A2D76AA266980A800186187 /* Examples */,
+				5A2D76AD2669829A00186187 /* Storyboards and Xibs */,
 				5A2D76952669695A00186187 /* Assets.xcassets */,
 				5A2D76972669695A00186187 /* LaunchScreen.storyboard */,
 				5A2D769A2669695A00186187 /* Info.plist */,
 			);
 			path = "GAD Mediation Demo";
+			sourceTree = "<group>";
+		};
+		5A2D76AA266980A800186187 /* Examples */ = {
+			isa = PBXGroup;
+			children = (
+				5A2D76A82669809F00186187 /* Native.swift */,
+				5A2D76A02669806000186187 /* Banner.swift */,
+				5A2D76A22669807100186187 /* MRect.swift */,
+				5A2D76A42669808800186187 /* Interstitial.swift */,
+				5A2D76A62669809500186187 /* Rewarded.swift */,
+			);
+			path = Examples;
+			sourceTree = "<group>";
+		};
+		5A2D76AD2669829A00186187 /* Storyboards and Xibs */ = {
+			isa = PBXGroup;
+			children = (
+				5A2D76922669695600186187 /* Main.storyboard */,
+				5A2D76AB2669829200186187 /* GADMediation.storyboard */,
+				5A2D76AE2669A2A100186187 /* NativeView.xib */,
+			);
+			path = "Storyboards and Xibs";
 			sourceTree = "<group>";
 		};
 		6E6912578EA8298487A56688 /* Pods */ = {
@@ -147,9 +184,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5A2D76AC2669829200186187 /* GADMediation.storyboard in Resources */,
 				5A2D76992669695A00186187 /* LaunchScreen.storyboard in Resources */,
 				5A2D76962669695A00186187 /* Assets.xcassets in Resources */,
 				5A2D76942669695600186187 /* Main.storyboard in Resources */,
+				5A2D76AF2669A2A100186187 /* NativeView.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,7 +242,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				5A2D768D2669695600186187 /* AppDelegate.swift in Sources */,
+				5A2D76A92669809F00186187 /* Native.swift in Sources */,
+				5A2D76A52669808800186187 /* Interstitial.swift in Sources */,
+				5A2D76A32669807100186187 /* MRect.swift in Sources */,
 				5A2D768F2669695600186187 /* SceneDelegate.swift in Sources */,
+				5A2D76A12669806000186187 /* Banner.swift in Sources */,
+				5A2D76A72669809500186187 /* Rewarded.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
