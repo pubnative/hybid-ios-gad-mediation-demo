@@ -14,7 +14,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
 // Step 3: Setup & Initialize HyBid SDK
         HyBid.initWithAppToken(appToken, completion: nil)
-
 // Step 4: Setup & Initialize GoogleMobileAds SDK
         GADMobileAds.sharedInstance().start(completionHandler: nil)
 // Step 5: Set COPPA (Optional)
@@ -33,6 +32,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         HyBid.setTargeting(targeting)
 // Step 10: Set AppStore App ID (iOS14 +)
         HyBid.setAppStoreAppID(appStoreID)
+// Step 11: Set HyBid log level (Optional)
+        HyBidLogger.setLogLevel(HyBidLogLevelDebug)
         
         return true
     }
