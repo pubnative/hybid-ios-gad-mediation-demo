@@ -16,7 +16,7 @@ class Banner: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationItem.title = "GAD Mediation Banner"
-        bannerView = GADBannerView(adSize: kGADAdSizeBanner)
+        bannerView = GADBannerView(adSize: GADAdSizeBanner)
         bannerView.delegate = self
         bannerView.adUnitID = adUnitID
         bannerView.rootViewController = self

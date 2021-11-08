@@ -16,7 +16,7 @@ class MRect: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationItem.title = "GAD Mediation MRect"
-        mRectView = GADBannerView(adSize: kGADAdSizeMediumRectangle)
+        mRectView = GADBannerView(adSize: GADAdSizeMediumRectangle)
         mRectView.delegate = self
         mRectView.adUnitID = adUnitID
         mRectView.rootViewController = self
