@@ -70,6 +70,10 @@
 	<array>
 		<dict>
 			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
 			<string>TL55SBB4FM.skadnetwork</string>
 		</dict>
 	</array>
