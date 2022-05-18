@@ -50,7 +50,8 @@ class Rewarded: UIViewController {
 }
 
 extension Rewarded : GADFullScreenContentDelegate {
-    func adDidPresentFullScreenContent(_ ad: GADFullScreenPresentingAd) {
+    func adWillPresentFullScreenContent(_ ad: GADFullScreenPresentingAd) {
+        
     }
     
     func ad(_ ad: GADFullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
