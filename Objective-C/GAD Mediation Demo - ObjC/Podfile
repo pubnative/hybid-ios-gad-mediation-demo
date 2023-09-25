@@ -6,5 +6,5 @@ target 'GAD Mediation Demo - ObjC' do
   use_frameworks!
 
   # Pods for GAD Mediation Demo - ObjC
-  pod 'GoogleMobileAds-HyBid-Adapters', '2.19.0.0'
+  pod 'GoogleMobileAds-HyBid-Adapters', '2.20.0.0'
 end
