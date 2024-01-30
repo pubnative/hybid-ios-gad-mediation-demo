@@ -1,4 +1,4 @@
-// For GAD (AdMob) Mediation Interstitial integration, simply just follow GAD's (AdMob's) documentation.
+// For GAD Mediation Interstitial integration, simply just follow GAD's documentation.
 // Google Mobile Ads HyBid Adapters that you've added to the project, will do all the work.
 // You don't have to write any HyBid related code for this integration.
 
