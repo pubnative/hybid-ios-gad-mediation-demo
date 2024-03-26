@@ -137,6 +137,7 @@
 				5A2D76862669695600186187 /* Frameworks */,
 				5A2D76872669695600186187 /* Resources */,
 				75E46F17FD79E6FE1ECCF853 /* [CP] Embed Pods Frameworks */,
+				AE7685C00F2E93C5E6D0AC65 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -232,6 +233,23 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-GAD Mediation Demo/Pods-GAD Mediation Demo-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		AE7685C00F2E93C5E6D0AC65 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-GAD Mediation Demo/Pods-GAD Mediation Demo-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-GAD Mediation Demo/Pods-GAD Mediation Demo-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-GAD Mediation Demo/Pods-GAD Mediation Demo-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */

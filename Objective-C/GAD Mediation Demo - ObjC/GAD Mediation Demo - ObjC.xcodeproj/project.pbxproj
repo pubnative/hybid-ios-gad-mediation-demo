@@ -48,7 +48,7 @@
 		34E9445727FC71F50080C2B5 /* NativeViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NativeViewController.h; sourceTree = "<group>"; };
 		34E9445827FC71F50080C2B5 /* NativeViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NativeViewController.m; sourceTree = "<group>"; };
 		487128EB3BFE2F5FDCBBCF9F /* Pods-GAD Mediation Demo - ObjC.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GAD Mediation Demo - ObjC.release.xcconfig"; path = "Target Support Files/Pods-GAD Mediation Demo - ObjC/Pods-GAD Mediation Demo - ObjC.release.xcconfig"; sourceTree = "<group>"; };
-		AA84576B53B5E2EFFEAE8D04 /* Pods_GAD_Mediation_Demo___ObjC.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = "Pods_GAD_Mediation_Demo___ObjC.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA84576B53B5E2EFFEAE8D04 /* Pods_GAD_Mediation_Demo___ObjC.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_GAD_Mediation_Demo___ObjC.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -154,6 +154,7 @@
 				34E9442627FC56CB0080C2B5 /* Frameworks */,
 				34E9442727FC56CB0080C2B5 /* Resources */,
 				636221BB865B46E97692231C /* [CP] Embed Pods Frameworks */,
+				3B4D28C44DC46D08A084D706 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -212,6 +213,23 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		3B4D28C44DC46D08A084D706 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-GAD Mediation Demo - ObjC/Pods-GAD Mediation Demo - ObjC-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-GAD Mediation Demo - ObjC/Pods-GAD Mediation Demo - ObjC-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-GAD Mediation Demo - ObjC/Pods-GAD Mediation Demo - ObjC-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 		636221BB865B46E97692231C /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
