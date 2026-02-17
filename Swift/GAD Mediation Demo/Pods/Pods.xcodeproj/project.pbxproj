@@ -6,24 +6,8 @@
 	objectVersion = 54;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		122B7D775E239E9164CF13FF6002B717 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
-		2323AA8DE860BDFE4F48677FFED0440B /* Pods-GAD Mediation Demo-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = C625AAD75B7E0A1317AC25A03358B622 /* Pods-GAD Mediation Demo-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		9EBEFAA03968FE6B75F7170658F367F5 /* Pods-GAD Mediation Demo-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 198D764057AF9F00D581B728D80C3547 /* Pods-GAD Mediation Demo-dummy.m */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
-		198D764057AF9F00D581B728D80C3547 /* Pods-GAD Mediation Demo-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "Pods-GAD Mediation Demo-dummy.m"; sourceTree = "<group>"; };
-		384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
-		4666DEB33376CAD20731205777580874 /* Pods-GAD Mediation Demo-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-GAD Mediation Demo-acknowledgements.plist"; sourceTree = "<group>"; };
-		7AF740F884E370B350670B2A3ED9B43A /* Pods-GAD Mediation Demo.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-GAD Mediation Demo.modulemap"; sourceTree = "<group>"; };
-		8469073D707FB718DA6B6538DA165962 /* Pods-GAD Mediation Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-GAD Mediation Demo.release.xcconfig"; sourceTree = "<group>"; };
-		9D940727FF8FB9C785EB98E56350EF41 /* Podfile */ = {isa = PBXFileReference; explicitFileType = text.script.ruby; includeInIndex = 1; indentWidth = 2; lastKnownFileType = text; name = Podfile; path = ../Podfile; sourceTree = SOURCE_ROOT; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
-		9F609227A83DAD4B1D02D0E563DD3162 /* Pods-GAD Mediation Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-GAD Mediation Demo.debug.xcconfig"; sourceTree = "<group>"; };
-		AE55FB25DFA6DCF64CBC99DB85659277 /* Pods-GAD Mediation Demo */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = "Pods-GAD Mediation Demo"; path = Pods_GAD_Mediation_Demo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		C625AAD75B7E0A1317AC25A03358B622 /* Pods-GAD Mediation Demo-umbrella.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "Pods-GAD Mediation Demo-umbrella.h"; sourceTree = "<group>"; };
-		C6C10A22F39CBDD0A59AB5DC62C2531E /* Pods-GAD Mediation Demo-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-GAD Mediation Demo-Info.plist"; sourceTree = "<group>"; };
-		DE51151C2514FEA108A0F6A0D192F50B /* Pods-GAD Mediation Demo-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-GAD Mediation Demo-acknowledgements.markdown"; sourceTree = "<group>"; };
+		342726802F44BD710097D892 /* Pods_GAD_Mediation_Demo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = Pods_GAD_Mediation_Demo.framework; path = "/Users/ayselabdullayeva/Documents/hybid-ios-gad-mediation-demo/Swift/GAD Mediation Demo/Pods/../build/Debug-iphoneos/Pods_GAD_Mediation_Demo.framework"; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -31,69 +15,16 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				122B7D775E239E9164CF13FF6002B717 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		6CD6891DCBF2223AB2632A3B271307D9 /* Pods-GAD Mediation Demo */ = {
-			isa = PBXGroup;
-			children = (
-				7AF740F884E370B350670B2A3ED9B43A /* Pods-GAD Mediation Demo.modulemap */,
-				DE51151C2514FEA108A0F6A0D192F50B /* Pods-GAD Mediation Demo-acknowledgements.markdown */,
-				4666DEB33376CAD20731205777580874 /* Pods-GAD Mediation Demo-acknowledgements.plist */,
-				198D764057AF9F00D581B728D80C3547 /* Pods-GAD Mediation Demo-dummy.m */,
-				C6C10A22F39CBDD0A59AB5DC62C2531E /* Pods-GAD Mediation Demo-Info.plist */,
-				C625AAD75B7E0A1317AC25A03358B622 /* Pods-GAD Mediation Demo-umbrella.h */,
-				9F609227A83DAD4B1D02D0E563DD3162 /* Pods-GAD Mediation Demo.debug.xcconfig */,
-				8469073D707FB718DA6B6538DA165962 /* Pods-GAD Mediation Demo.release.xcconfig */,
-			);
-			name = "Pods-GAD Mediation Demo";
-			path = "Target Support Files/Pods-GAD Mediation Demo";
-			sourceTree = "<group>";
-		};
-		B6B148A201F68DF8236B5F48C197595B /* Targets Support Files */ = {
-			isa = PBXGroup;
-			children = (
-				6CD6891DCBF2223AB2632A3B271307D9 /* Pods-GAD Mediation Demo */,
-			);
-			name = "Targets Support Files";
-			sourceTree = "<group>";
-		};
 		CF1408CF629C7361332E53B88F7BD30C = {
 			isa = PBXGroup;
 			children = (
-				9D940727FF8FB9C785EB98E56350EF41 /* Podfile */,
-				D210D550F4EA176C3123ED886F8F87F5 /* Frameworks */,
-				E556DC24714E3AF799BDBCF84A3DC14C /* Products */,
-				B6B148A201F68DF8236B5F48C197595B /* Targets Support Files */,
 			);
-			sourceTree = "<group>";
-		};
-		D210D550F4EA176C3123ED886F8F87F5 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				E4801F62A6B08CD9B5410329F1A18FDE /* iOS */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		E4801F62A6B08CD9B5410329F1A18FDE /* iOS */ = {
-			isa = PBXGroup;
-			children = (
-				384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */,
-			);
-			name = iOS;
-			sourceTree = "<group>";
-		};
-		E556DC24714E3AF799BDBCF84A3DC14C /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				AE55FB25DFA6DCF64CBC99DB85659277 /* Pods-GAD Mediation Demo */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -103,7 +34,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2323AA8DE860BDFE4F48677FFED0440B /* Pods-GAD Mediation Demo-umbrella.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,7 +55,7 @@
 			);
 			name = "Pods-GAD Mediation Demo";
 			productName = Pods_GAD_Mediation_Demo;
-			productReference = AE55FB25DFA6DCF64CBC99DB85659277 /* Pods-GAD Mediation Demo */;
+			productReference = 342726802F44BD710097D892 /* Pods_GAD_Mediation_Demo.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
@@ -146,9 +76,7 @@
 				en,
 			);
 			mainGroup = CF1408CF629C7361332E53B88F7BD30C;
-			minimizedProjectReferenceProxies = 0;
-			preferredProjectObjectVersion = 77;
-			productRefGroup = E556DC24714E3AF799BDBCF84A3DC14C /* Products */;
+			productRefGroup = CF1408CF629C7361332E53B88F7BD30C;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -172,7 +100,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9EBEFAA03968FE6B75F7170658F367F5 /* Pods-GAD Mediation Demo-dummy.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -181,7 +108,6 @@
 /* Begin XCBuildConfiguration section */
 		12A05642FABEA1E77168656B1289EF25 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8469073D707FB718DA6B6538DA165962 /* Pods-GAD Mediation Demo.release.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				CLANG_ENABLE_OBJC_WEAK = NO;
@@ -221,7 +147,6 @@
 		};
 		AD4C0A2514E9C1FF942B231813362038 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 9F609227A83DAD4B1D02D0E563DD3162 /* Pods-GAD Mediation Demo.debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				CLANG_ENABLE_OBJC_WEAK = NO;
