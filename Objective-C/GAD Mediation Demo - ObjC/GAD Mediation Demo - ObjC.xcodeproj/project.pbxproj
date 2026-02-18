@@ -24,7 +24,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		34E9442927FC56CB0080C2B5 /* GAD Mediation Demo - ObjC.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "GAD Mediation Demo - ObjC.app"; path = "/Users/ayselabdullayeva/Documents/hybid-ios-gad-mediation-demo/Objective-C/GAD Mediation Demo - ObjC/build/Debug-iphoneos/GAD Mediation Demo - ObjC.app"; sourceTree = "<absolute>"; };
+		342726B82F461EE40097D892 /* GAD Mediation Demo - ObjC.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "GAD Mediation Demo - ObjC.app"; path = "/Users/ayselabdullayeva/Documents/hybid-ios-gad-mediation-demo/Objective-C/GAD Mediation Demo - ObjC/build/Debug-iphoneos/GAD Mediation Demo - ObjC.app"; sourceTree = "<absolute>"; };
 		34E9442C27FC56CB0080C2B5 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		34E9442D27FC56CB0080C2B5 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		34E9442F27FC56CB0080C2B5 /* SceneDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SceneDelegate.h; sourceTree = "<group>"; };
@@ -64,7 +64,6 @@
 			isa = PBXGroup;
 			children = (
 				34E9442B27FC56CB0080C2B5 /* GAD Mediation Demo - ObjC */,
-				8120FA56B8C3FE2D22CF944B /* Pods */,
 			);
 			sourceTree = "<group>";
 		};
@@ -112,13 +111,6 @@
 			path = Examples;
 			sourceTree = "<group>";
 		};
-		8120FA56B8C3FE2D22CF944B /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Pods;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -136,7 +128,7 @@
 			);
 			name = "GAD Mediation Demo - ObjC";
 			productName = "GAD Mediation Demo - ObjC";
-			productReference = 34E9442927FC56CB0080C2B5 /* GAD Mediation Demo - ObjC.app */;
+			productReference = 342726B82F461EE40097D892 /* GAD Mediation Demo - ObjC.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
