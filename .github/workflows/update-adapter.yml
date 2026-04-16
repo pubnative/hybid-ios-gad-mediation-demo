@@ -1,0 +1,60 @@
+name: Update Google Adapter
+
+# Triggered by the "Release Google Adapter" workflow in pubnative-hybid-ios-sdk-private
+# via repository_dispatch. Bumps pod 'GoogleMobileAds-HyBid-Adapters' in all Podfiles,
+# runs pod update, and opens a PR to master.
+
+on:
+  repository_dispatch:
+    types: [google-adapter-release]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+defaults:
+  run:
+    shell: bash -o pipefail {0}
+
+jobs:
+  update:
+    name: "Bump GoogleMobileAds-HyBid-Adapters and open PR"
+    runs-on: macos-latest
+    env:
+      ADAPTER_VERSION: ${{ github.event.client_payload.adapter_version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump adapter version in Podfiles and run pod update
+        run: |
+          echo "Updating pod 'GoogleMobileAds-HyBid-Adapters' to $ADAPTER_VERSION in all Podfiles…"
+          find . -name Podfile | sort | while read podfile; do
+            dir=$(dirname "$podfile")
+            echo "  → $podfile"
+            sed -i '' "s|pod 'GoogleMobileAds-HyBid-Adapters', '[^']*'|pod 'GoogleMobileAds-HyBid-Adapters', '$ADAPTER_VERSION'|g" "$podfile"
+            (cd "$dir" && pod update GoogleMobileAds-HyBid-Adapters)
+          done
+          echo "─── Diff preview ────────────────────────────────────────────"
+          git diff
+          echo "─────────────────────────────────────────────────────────────"
+
+      - name: Commit, push branch and open PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="update-google-adapter-${ADAPTER_VERSION}"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "Pod GoogleMobileAds-HyBid-Adapters v: $ADAPTER_VERSION is added"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "Pod GoogleMobileAds-HyBid-Adapters v: $ADAPTER_VERSION is added" \
+            --body  "Automated update: bumps GoogleMobileAds-HyBid-Adapters to v$ADAPTER_VERSION and runs pod update." \
+            --base  master \
+            --head  "$BRANCH"
