@@ -1,33 +1,33 @@
 PODS:
-  - ATOM-Standalone (3.8.0)
-  - Google-Mobile-Ads-SDK (12.12.0):
+  - ATOM-Standalone (3.9.0)
+  - Google-Mobile-Ads-SDK (12.14.0):
     - GoogleUserMessagingPlatform (>= 1.1)
-  - GoogleMobileAds-HyBid-Adapters (3.7.0.0):
+  - GoogleMobileAds-HyBid-Adapters (3.7.1.0):
     - Google-Mobile-Ads-SDK (~> 12.0)
-    - HyBid (= 3.7.0)
-  - GoogleUserMessagingPlatform (3.0.0)
-  - HyBid (3.7.0):
-    - HyBid/ATOM (= 3.7.0)
-    - HyBid/Banner (= 3.7.0)
-    - HyBid/Core (= 3.7.0)
-    - HyBid/FullScreen (= 3.7.0)
-    - HyBid/Native (= 3.7.0)
-    - HyBid/RewardedVideo (= 3.7.0)
-  - HyBid/ATOM (3.7.0):
+    - HyBid (= 3.7.1)
+  - GoogleUserMessagingPlatform (3.1.0)
+  - HyBid (3.7.1):
+    - HyBid/ATOM (= 3.7.1)
+    - HyBid/Banner (= 3.7.1)
+    - HyBid/Core (= 3.7.1)
+    - HyBid/FullScreen (= 3.7.1)
+    - HyBid/Native (= 3.7.1)
+    - HyBid/RewardedVideo (= 3.7.1)
+  - HyBid/ATOM (3.7.1):
     - ATOM-Standalone
     - HyBid/Core
-  - HyBid/Banner (3.7.0):
+  - HyBid/Banner (3.7.1):
     - HyBid/Core
-  - HyBid/Core (3.7.0)
-  - HyBid/FullScreen (3.7.0):
+  - HyBid/Core (3.7.1)
+  - HyBid/FullScreen (3.7.1):
     - HyBid/Core
-  - HyBid/Native (3.7.0):
+  - HyBid/Native (3.7.1):
     - HyBid/Core
-  - HyBid/RewardedVideo (3.7.0):
+  - HyBid/RewardedVideo (3.7.1):
     - HyBid/Core
 
 DEPENDENCIES:
-  - GoogleMobileAds-HyBid-Adapters (= 3.7.0.0)
+  - GoogleMobileAds-HyBid-Adapters (= 3.7.1.0)
 
 SPEC REPOS:
   trunk:
@@ -38,12 +38,12 @@ SPEC REPOS:
     - HyBid
 
 SPEC CHECKSUMS:
-  ATOM-Standalone: ad17f0d0e60b22f67ed99e5a336425d68d324f3e
-  Google-Mobile-Ads-SDK: 4dde70a8c18d96b14f9548759b8cec6ecb0bc3e6
-  GoogleMobileAds-HyBid-Adapters: 86b0f9a614cbffb3cfc4d5fe8af55fc3c769aa46
-  GoogleUserMessagingPlatform: f8d0cdad3ca835406755d0a69aa634f00e76d576
-  HyBid: 84608b62cdebde3dcab171948959fa617957063b
+  ATOM-Standalone: cd8bed8eb43e48d0f2e778aa0db893cb7f8ceb93
+  Google-Mobile-Ads-SDK: 4534fd2dfcd3f705c5485a6633c5188d03d4eed2
+  GoogleMobileAds-HyBid-Adapters: f32084c0d0514bc898ab4f65c80aac4bc18b0591
+  GoogleUserMessagingPlatform: befe603da6501006420c206222acd449bba45a9c
+  HyBid: c75fa40e2d209aaed25b60f7bcd0e408d294c19e
 
-PODFILE CHECKSUM: 2a509b6f3d4eb7251881d052d265abae43e108c9
+PODFILE CHECKSUM: 186f57b94aa0343465b5a06407c804a56edb0423
 
-COCOAPODS: 1.16.0
+COCOAPODS: 1.16.2
