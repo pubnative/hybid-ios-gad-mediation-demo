@@ -1,11 +1,11 @@
 PODS:
-  - ATOM-Standalone (3.8.0)
-  - Google-Mobile-Ads-SDK (12.12.0):
+  - ATOM-Standalone (3.9.0)
+  - Google-Mobile-Ads-SDK (12.14.0):
     - GoogleUserMessagingPlatform (>= 1.1)
   - GoogleMobileAds-HyBid-Adapters (3.7.0.0):
     - Google-Mobile-Ads-SDK (~> 12.0)
     - HyBid (= 3.7.0)
-  - GoogleUserMessagingPlatform (3.0.0)
+  - GoogleUserMessagingPlatform (3.1.0)
   - HyBid (3.7.0):
     - HyBid/ATOM (= 3.7.0)
     - HyBid/Banner (= 3.7.0)
@@ -38,12 +38,12 @@ SPEC REPOS:
     - HyBid
 
 SPEC CHECKSUMS:
-  ATOM-Standalone: ad17f0d0e60b22f67ed99e5a336425d68d324f3e
-  Google-Mobile-Ads-SDK: 4dde70a8c18d96b14f9548759b8cec6ecb0bc3e6
+  ATOM-Standalone: cd8bed8eb43e48d0f2e778aa0db893cb7f8ceb93
+  Google-Mobile-Ads-SDK: 4534fd2dfcd3f705c5485a6633c5188d03d4eed2
   GoogleMobileAds-HyBid-Adapters: 86b0f9a614cbffb3cfc4d5fe8af55fc3c769aa46
-  GoogleUserMessagingPlatform: f8d0cdad3ca835406755d0a69aa634f00e76d576
+  GoogleUserMessagingPlatform: befe603da6501006420c206222acd449bba45a9c
   HyBid: 84608b62cdebde3dcab171948959fa617957063b
 
 PODFILE CHECKSUM: 2a509b6f3d4eb7251881d052d265abae43e108c9
 
-COCOAPODS: 1.16.0
+COCOAPODS: 1.16.2
