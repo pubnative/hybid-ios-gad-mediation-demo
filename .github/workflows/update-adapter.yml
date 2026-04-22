@@ -26,6 +26,7 @@ jobs:
     runs-on: macos-latest
     env:
       ADAPTER_VERSION: ${{ github.event.client_payload.adapter_version }}
+      HYBID_VERSION:   ${{ github.event.client_payload.hybid_version }}
 
     steps:
       - uses: actions/checkout@v4
