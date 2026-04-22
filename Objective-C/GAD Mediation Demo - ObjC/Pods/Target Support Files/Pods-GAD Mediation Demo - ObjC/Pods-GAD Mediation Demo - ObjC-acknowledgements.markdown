@@ -147,7 +147,7 @@ Preamble
 
 ## Google-Mobile-Ads-SDK
 
-Copyright 2025 Google LLC
+Copyright 2026 Google LLC
 
 ## GoogleMobileAds-HyBid-Adapters
 
