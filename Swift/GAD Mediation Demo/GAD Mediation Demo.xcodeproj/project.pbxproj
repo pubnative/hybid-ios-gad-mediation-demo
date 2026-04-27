@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3427267F2F44BB1C0097D892 /* GoogleMobileAdsHyBidAdapters in Frameworks */ = {isa = PBXBuildFile; productRef = 3427267E2F44BB1C0097D892 /* GoogleMobileAdsHyBidAdapters */; };
+		34F803392F9FA816000F55EF /* GoogleMobileAdsHyBidAdapters in Frameworks */ = {isa = PBXBuildFile; productRef = 34F803382F9FA816000F55EF /* GoogleMobileAdsHyBidAdapters */; };
 		5A2D768D2669695600186187 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2D768C2669695600186187 /* AppDelegate.swift */; };
 		5A2D768F2669695600186187 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2D768E2669695600186187 /* SceneDelegate.swift */; };
 		5A2D76942669695600186187 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5A2D76922669695600186187 /* Main.storyboard */; };
@@ -44,7 +44,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3427267F2F44BB1C0097D892 /* GoogleMobileAdsHyBidAdapters in Frameworks */,
+				34F803392F9FA816000F55EF /* GoogleMobileAdsHyBidAdapters in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -147,7 +147,7 @@
 			);
 			mainGroup = 5A2D76802669695600186187;
 			packageReferences = (
-				3427267D2F44BB1C0097D892 /* XCRemoteSwiftPackageReference "googleMobileAds-hybid-adapters-ios" */,
+				34F803372F9FA816000F55EF /* XCRemoteSwiftPackageReference "googleMobileAds-hybid-adapters-ios" */,
 			);
 			productRefGroup = 5A2D768A2669695600186187 /* Products */;
 			projectDirPath = "";
@@ -388,20 +388,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		3427267D2F44BB1C0097D892 /* XCRemoteSwiftPackageReference "googleMobileAds-hybid-adapters-ios" */ = {
+		34F803372F9FA816000F55EF /* XCRemoteSwiftPackageReference "googleMobileAds-hybid-adapters-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pubnative/googleMobileAds-hybid-adapters-ios";
 			requirement = {
-				branch = "VMI-1493-add-spm-support";
+				branch = master;
 				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		3427267E2F44BB1C0097D892 /* GoogleMobileAdsHyBidAdapters */ = {
+		34F803382F9FA816000F55EF /* GoogleMobileAdsHyBidAdapters */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 3427267D2F44BB1C0097D892 /* XCRemoteSwiftPackageReference "googleMobileAds-hybid-adapters-ios" */;
+			package = 34F803372F9FA816000F55EF /* XCRemoteSwiftPackageReference "googleMobileAds-hybid-adapters-ios" */;
 			productName = GoogleMobileAdsHyBidAdapters;
 		};
 /* End XCSwiftPackageProductDependency section */

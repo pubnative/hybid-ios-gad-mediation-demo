@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		342726842F44BF7B0097D892 /* GoogleMobileAdsHyBidAdapters in Frameworks */ = {isa = PBXBuildFile; productRef = 342726832F44BF7B0097D892 /* GoogleMobileAdsHyBidAdapters */; };
 		34E9442E27FC56CB0080C2B5 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 34E9442D27FC56CB0080C2B5 /* AppDelegate.m */; };
 		34E9443127FC56CB0080C2B5 /* SceneDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 34E9443027FC56CB0080C2B5 /* SceneDelegate.m */; };
 		34E9443727FC56CB0080C2B5 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 34E9443527FC56CB0080C2B5 /* Main.storyboard */; };
@@ -21,10 +20,10 @@
 		34E9445327FC67260080C2B5 /* InterstitialViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 34E9445227FC67260080C2B5 /* InterstitialViewController.m */; };
 		34E9445627FC6DE90080C2B5 /* RewardedViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 34E9445527FC6DE90080C2B5 /* RewardedViewController.m */; };
 		34E9445927FC71F50080C2B5 /* NativeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 34E9445827FC71F50080C2B5 /* NativeViewController.m */; };
+		34F8033C2F9FB31B000F55EF /* GoogleMobileAdsHyBidAdapters in Frameworks */ = {isa = PBXBuildFile; productRef = 34F8033B2F9FB31B000F55EF /* GoogleMobileAdsHyBidAdapters */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		342726B82F461EE40097D892 /* GAD Mediation Demo - ObjC.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "GAD Mediation Demo - ObjC.app"; path = "/Users/ayselabdullayeva/Documents/hybid-ios-gad-mediation-demo/Objective-C/GAD Mediation Demo - ObjC/build/Debug-iphoneos/GAD Mediation Demo - ObjC.app"; sourceTree = "<absolute>"; };
 		34E9442C27FC56CB0080C2B5 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		34E9442D27FC56CB0080C2B5 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		34E9442F27FC56CB0080C2B5 /* SceneDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SceneDelegate.h; sourceTree = "<group>"; };
@@ -46,6 +45,7 @@
 		34E9445527FC6DE90080C2B5 /* RewardedViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RewardedViewController.m; sourceTree = "<group>"; };
 		34E9445727FC71F50080C2B5 /* NativeViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NativeViewController.h; sourceTree = "<group>"; };
 		34E9445827FC71F50080C2B5 /* NativeViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NativeViewController.m; sourceTree = "<group>"; };
+		34F803362F9FA7F1000F55EF /* GAD Mediation Demo - ObjC.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "GAD Mediation Demo - ObjC.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,7 +53,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				342726842F44BF7B0097D892 /* GoogleMobileAdsHyBidAdapters in Frameworks */,
+				34F8033C2F9FB31B000F55EF /* GoogleMobileAdsHyBidAdapters in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,6 +64,7 @@
 			isa = PBXGroup;
 			children = (
 				34E9442B27FC56CB0080C2B5 /* GAD Mediation Demo - ObjC */,
+				34F803362F9FA7F1000F55EF /* GAD Mediation Demo - ObjC.app */,
 			);
 			sourceTree = "<group>";
 		};
@@ -128,7 +129,7 @@
 			);
 			name = "GAD Mediation Demo - ObjC";
 			productName = "GAD Mediation Demo - ObjC";
-			productReference = 342726B82F461EE40097D892 /* GAD Mediation Demo - ObjC.app */;
+			productReference = 34F803362F9FA7F1000F55EF /* GAD Mediation Demo - ObjC.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -155,7 +156,7 @@
 			);
 			mainGroup = 34E9442027FC56CB0080C2B5;
 			packageReferences = (
-				342726822F44BF7B0097D892 /* XCRemoteSwiftPackageReference "googleMobileAds-hybid-adapters-ios" */,
+				34F8033A2F9FB31B000F55EF /* XCRemoteSwiftPackageReference "hybid-ios-spm-sdk" */,
 			);
 			productRefGroup = 34E9442027FC56CB0080C2B5;
 			projectDirPath = "";
@@ -409,20 +410,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		342726822F44BF7B0097D892 /* XCRemoteSwiftPackageReference "googleMobileAds-hybid-adapters-ios" */ = {
+		34F8033A2F9FB31B000F55EF /* XCRemoteSwiftPackageReference "hybid-ios-spm-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pubnative/googleMobileAds-hybid-adapters-ios";
+			repositoryURL = "https://github.com/vervegroup/hybid-ios-spm-sdk";
 			requirement = {
-				branch = "VMI-1493-add-spm-support";
+				branch = "VMI-1565-add-adapters";
 				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		342726832F44BF7B0097D892 /* GoogleMobileAdsHyBidAdapters */ = {
+		34F8033B2F9FB31B000F55EF /* GoogleMobileAdsHyBidAdapters */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 342726822F44BF7B0097D892 /* XCRemoteSwiftPackageReference "googleMobileAds-hybid-adapters-ios" */;
+			package = 34F8033A2F9FB31B000F55EF /* XCRemoteSwiftPackageReference "hybid-ios-spm-sdk" */;
 			productName = GoogleMobileAdsHyBidAdapters;
 		};
 /* End XCSwiftPackageProductDependency section */
