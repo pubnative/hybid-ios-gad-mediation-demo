@@ -10,13 +10,13 @@ class Banner: UIViewController {
     @IBOutlet weak var bannerAdContainer: UIView!
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     
-    var bannerView: GADBannerView!
+    var bannerView: BannerView!
     let adUnitID = "ca-app-pub-8741261465579918/4075513559"
     
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationItem.title = "GAD Mediation Banner"
-        bannerView = GADBannerView(adSize: GADAdSizeBanner)
+        bannerView = BannerView(adSize: AdSizeBanner)
         bannerView.delegate = self
         bannerView.adUnitID = adUnitID
         bannerView.rootViewController = self
@@ -26,29 +26,29 @@ class Banner: UIViewController {
     @IBAction func loadAdTouchUpInside(_ sender: UIButton) {
         activityIndicator.startAnimating()
         bannerAdContainer.isHidden = true
-        bannerView.load(GADRequest())
+        bannerView.load(Request())
     }
 }
 
-extension Banner : GADBannerViewDelegate {
-    func bannerViewDidReceiveAd(_ bannerView: GADBannerView) {
+extension Banner : BannerViewDelegate {
+    func bannerViewDidReceiveAd(_ bannerView: BannerView) {
         bannerAdContainer.isHidden = false
         activityIndicator.stopAnimating()
     }
     
-    func bannerView(_ bannerView: GADBannerView, didFailToReceiveAdWithError error: Error) {
+    func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {
         activityIndicator.stopAnimating()
     }
     
-    func bannerViewDidRecordImpression(_ bannerView: GADBannerView) {
+    func bannerViewDidRecordImpression(_ bannerView: BannerView) {
     }
     
-    func bannerViewWillPresentScreen(_ bannerView: GADBannerView) {
+    func bannerViewWillPresentScreen(_ bannerView: BannerView) {
     }
     
-    func bannerViewWillDismissScreen(_ bannerView: GADBannerView) {
+    func bannerViewWillDismissScreen(_ bannerView: BannerView) {
     }
     
-    func bannerViewDidDismissScreen(_ bannerView: GADBannerView) {
+    func bannerViewDidDismissScreen(_ bannerView: BannerView) {
     }
 }

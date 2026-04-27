@@ -10,7 +10,7 @@ class Rewarded: UIViewController {
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     @IBOutlet weak var showAdButton: UIButton!
 
-    private var rewardedAd: GADRewardedAd?
+    private var rewardedAd: RewardedAd?
     let adUnitID = "ca-app-pub-8741261465579918/7366717846"
 
     override func viewDidLoad() {
@@ -21,8 +21,8 @@ class Rewarded: UIViewController {
     @IBAction func loadAdTouchUpInside(_ sender: UIButton) {
         activityIndicator.startAnimating()
         showAdButton.isHidden = true
-        let request = GADRequest()
-        GADRewardedAd.load(withAdUnitID:adUnitID,
+        let request = Request()
+        RewardedAd.load(with:adUnitID,
                                request: request,
                                completionHandler: { [self] ad, error in
                                 if let error = error {
@@ -39,7 +39,7 @@ class Rewarded: UIViewController {
 
     @IBAction func showAdTouchUpInside(_ sender: UIButton) {
         if rewardedAd != nil {
-            rewardedAd?.present(fromRootViewController: self, userDidEarnRewardHandler: {
+            rewardedAd?.present(from: self, userDidEarnRewardHandler: {
                 let reward = self.rewardedAd?.adReward
                 print("Reward received:\(String(describing: reward))")
             })
@@ -49,16 +49,16 @@ class Rewarded: UIViewController {
     }
 }
 
-extension Rewarded : GADFullScreenContentDelegate {
-    func adWillPresentFullScreenContent(_ ad: GADFullScreenPresentingAd) {
+extension Rewarded : FullScreenContentDelegate {
+    func adWillPresentFullScreenContent(_ ad: FullScreenPresentingAd) {
         
     }
     
-    func ad(_ ad: GADFullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
+    func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
         activityIndicator.stopAnimating()
     }
     
-    func adDidDismissFullScreenContent(_ ad: GADFullScreenPresentingAd) {
+    func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
         showAdButton.isHidden = true
     }
 }

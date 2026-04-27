@@ -10,13 +10,13 @@ class MRect: UIViewController {
     @IBOutlet weak var mRectAdContainer: UIView!
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     
-    var mRectView: GADBannerView!
+    var mRectView: BannerView!
     let adUnitID = "ca-app-pub-8741261465579918/6510105208"
     
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationItem.title = "GAD Mediation MRect"
-        mRectView = GADBannerView(adSize: GADAdSizeMediumRectangle)
+        mRectView = BannerView(adSize: AdSizeMediumRectangle)
         mRectView.delegate = self
         mRectView.adUnitID = adUnitID
         mRectView.rootViewController = self
@@ -26,29 +26,29 @@ class MRect: UIViewController {
     @IBAction func loadAdTouchUpInside(_ sender: UIButton) {
         activityIndicator.startAnimating()
         mRectAdContainer.isHidden = true
-        mRectView.load(GADRequest())
+        mRectView.load(Request())
     }
 }
 
-extension MRect : GADBannerViewDelegate {
-    func bannerViewDidReceiveAd(_ bannerView: GADBannerView) {
+extension MRect : BannerViewDelegate {
+    func bannerViewDidReceiveAd(_ bannerView: BannerView) {
         mRectAdContainer.isHidden = false
         activityIndicator.stopAnimating()
     }
     
-    func bannerView(_ bannerView: GADBannerView, didFailToReceiveAdWithError error: Error) {
+    func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {
         activityIndicator.stopAnimating()
     }
     
-    func bannerViewDidRecordImpression(_ bannerView: GADBannerView) {
+    func bannerViewDidRecordImpression(_ bannerView: BannerView) {
     }
     
-    func bannerViewWillPresentScreen(_ bannerView: GADBannerView) {
+    func bannerViewWillPresentScreen(_ bannerView: BannerView) {
     }
     
-    func bannerViewWillDismissScreen(_ bannerView: GADBannerView) {
+    func bannerViewWillDismissScreen(_ bannerView: BannerView) {
     }
     
-    func bannerViewDidDismissScreen(_ bannerView: GADBannerView) {
+    func bannerViewDidDismissScreen(_ bannerView: BannerView) {
     }
 }

@@ -15,7 +15,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 // Step 3: Setup & Initialize HyBid SDK
         HyBid.initWithAppToken(appToken, completion: nil)
 // Step 4: Setup & Initialize GoogleMobileAds SDK
-        GADMobileAds.sharedInstance().start(completionHandler: nil)
+        MobileAds.shared.start(completionHandler: nil)
 // Step 5: Set COPPA (Optional)
         HyBid.setCoppa(false)
 // Step 6: Set Test Mode (Optional)

@@ -10,7 +10,7 @@ class Interstitial: UIViewController {
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     @IBOutlet weak var showAdButton: UIButton!
     
-    private var interstitialAd: GADInterstitialAd?
+    private var interstitialAd: InterstitialAd?
     let adUnitID = "ca-app-pub-8741261465579918/1815008264"
     
     override func viewDidLoad() {
@@ -21,8 +21,8 @@ class Interstitial: UIViewController {
     @IBAction func loadAdTouchUpInside(_ sender: UIButton) {
         activityIndicator.startAnimating()
         showAdButton.isHidden = true
-        let request = GADRequest()
-        GADInterstitialAd.load(withAdUnitID:adUnitID,
+        let request = Request()
+        InterstitialAd.load(with:adUnitID,
                                request: request,
                                completionHandler: { [self] ad, error in
                                 if let error = error {
@@ -39,23 +39,23 @@ class Interstitial: UIViewController {
     
     @IBAction func showAdTouchUpInside(_ sender: UIButton) {
         if interstitialAd != nil {
-            interstitialAd?.present(fromRootViewController: self)
+            interstitialAd?.present(from: self)
         } else {
             print("Ad wasn't ready")
         }
     }
 }
 
-extension Interstitial : GADFullScreenContentDelegate {
-    func adWillPresentFullScreenContent(_ ad: GADFullScreenPresentingAd) {
+extension Interstitial : FullScreenContentDelegate {
+    func adWillPresentFullScreenContent(_ ad: FullScreenPresentingAd) {
         
     }
     
-    func ad(_ ad: GADFullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
+    func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
         activityIndicator.stopAnimating()
     }
     
-    func adDidDismissFullScreenContent(_ ad: GADFullScreenPresentingAd) {
+    func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
         showAdButton.isHidden = true
     }
 }
