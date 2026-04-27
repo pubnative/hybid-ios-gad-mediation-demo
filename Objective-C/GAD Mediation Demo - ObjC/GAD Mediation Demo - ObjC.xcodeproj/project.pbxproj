@@ -20,7 +20,7 @@
 		34E9445327FC67260080C2B5 /* InterstitialViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 34E9445227FC67260080C2B5 /* InterstitialViewController.m */; };
 		34E9445627FC6DE90080C2B5 /* RewardedViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 34E9445527FC6DE90080C2B5 /* RewardedViewController.m */; };
 		34E9445927FC71F50080C2B5 /* NativeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 34E9445827FC71F50080C2B5 /* NativeViewController.m */; };
-		34F8033C2F9FB31B000F55EF /* GoogleMobileAdsHyBidAdapters in Frameworks */ = {isa = PBXBuildFile; productRef = 34F8033B2F9FB31B000F55EF /* GoogleMobileAdsHyBidAdapters */; };
+		34F803422F9FBFA1000F55EF /* GoogleMobileAdsHyBidAdapters in Frameworks */ = {isa = PBXBuildFile; productRef = 34F803412F9FBFA1000F55EF /* GoogleMobileAdsHyBidAdapters */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -53,7 +53,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				34F8033C2F9FB31B000F55EF /* GoogleMobileAdsHyBidAdapters in Frameworks */,
+				34F803422F9FBFA1000F55EF /* GoogleMobileAdsHyBidAdapters in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -156,7 +156,7 @@
 			);
 			mainGroup = 34E9442027FC56CB0080C2B5;
 			packageReferences = (
-				34F8033A2F9FB31B000F55EF /* XCRemoteSwiftPackageReference "hybid-ios-spm-sdk" */,
+				34F803402F9FBFA1000F55EF /* XCRemoteSwiftPackageReference "hybid-ios-spm-sdk" */,
 			);
 			productRefGroup = 34E9442027FC56CB0080C2B5;
 			projectDirPath = "";
@@ -410,7 +410,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		34F8033A2F9FB31B000F55EF /* XCRemoteSwiftPackageReference "hybid-ios-spm-sdk" */ = {
+		34F803402F9FBFA1000F55EF /* XCRemoteSwiftPackageReference "hybid-ios-spm-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/vervegroup/hybid-ios-spm-sdk";
 			requirement = {
@@ -421,9 +421,9 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		34F8033B2F9FB31B000F55EF /* GoogleMobileAdsHyBidAdapters */ = {
+		34F803412F9FBFA1000F55EF /* GoogleMobileAdsHyBidAdapters */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 34F8033A2F9FB31B000F55EF /* XCRemoteSwiftPackageReference "hybid-ios-spm-sdk" */;
+			package = 34F803402F9FBFA1000F55EF /* XCRemoteSwiftPackageReference "hybid-ios-spm-sdk" */;
 			productName = GoogleMobileAdsHyBidAdapters;
 		};
 /* End XCSwiftPackageProductDependency section */

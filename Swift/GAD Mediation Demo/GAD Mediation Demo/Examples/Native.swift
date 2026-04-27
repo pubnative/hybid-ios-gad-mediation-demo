@@ -10,8 +10,8 @@ class Native: UIViewController {
     @IBOutlet weak var nativeAdContainer: UIView!
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     
-    var adLoader: GADAdLoader!
-    var nativeAdView: GADNativeAdView?
+    var adLoader: AdLoader!
+    var nativeAdView: NativeAdView?
     let adUnitID = "ca-app-pub-8741261465579918/8160924764"
     
     override func viewDidLoad() {
@@ -22,23 +22,23 @@ class Native: UIViewController {
     @IBAction func loadAdTouchUpInside(_ sender: UIButton) {
         nativeAdContainer.isHidden = true
         activityIndicator.startAnimating()
-        let multipleAdsOptions = GADMultipleAdsAdLoaderOptions()
-        adLoader = GADAdLoader(adUnitID: adUnitID, rootViewController: self,
+        let multipleAdsOptions = MultipleAdsAdLoaderOptions()
+        adLoader = AdLoader(adUnitID: adUnitID, rootViewController: self,
                                adTypes: [.native],
                                options: [multipleAdsOptions])
         adLoader.delegate = self
-        adLoader.load(GADRequest())
+        adLoader.load(Request())
     }
 }
 
-extension Native : GADNativeAdLoaderDelegate {
-    func adLoaderDidFinishLoading(_ adLoader: GADAdLoader) {
+extension Native : NativeAdLoaderDelegate {
+    func adLoaderDidFinishLoading(_ adLoader: AdLoader) {
         activityIndicator.stopAnimating()
     }
     
-    func adLoader(_ adLoader: GADAdLoader, didReceive nativeAd: GADNativeAd) {
+    func adLoader(_ adLoader: AdLoader, didReceive nativeAd: NativeAd) {
         let nibView = Bundle.main.loadNibNamed("NativeView", owner: nil, options: nil)?.first
-        guard let nativeAdView = nibView as? GADNativeAdView else {
+        guard let nativeAdView = nibView as? NativeAdView else {
             return
         }
         self.nativeAdView?.removeFromSuperview()
@@ -60,7 +60,7 @@ extension Native : GADNativeAdLoaderDelegate {
         nativeAdView.nativeAd = nativeAd
     }
     
-    func adLoader(_ adLoader: GADAdLoader, didFailToReceiveAdWithError error: Error) {
+    func adLoader(_ adLoader: AdLoader, didFailToReceiveAdWithError error: Error) {
         activityIndicator.stopAnimating()
     }
 }
