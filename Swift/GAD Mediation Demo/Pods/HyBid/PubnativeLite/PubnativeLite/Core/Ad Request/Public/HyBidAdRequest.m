@@ -27,6 +27,7 @@
 #import "HyBidEndCardManager.h"
 #import "HyBidVASTEventProcessor.h"
 #import "HyBidVASTParserError.h"
+#import "HyBidStringUtils.h"
 
 #if __has_include(<HyBid/HyBid-Swift.h>)
     #import <UIKit/UIKit.h>
@@ -303,7 +304,8 @@ NSInteger const PNLiteResponseStatusOK = 200;
     });
 }
 
-- (NSDictionary *)createDictionaryFromData:(NSData *)data {
+- (nullable NSDictionary *)createDictionaryFromData:(NSData *)data {
+    if (!data) { return nil; }
     NSError *parseError;
     NSDictionary *jsonDictonary = [NSJSONSerialization JSONObjectWithData:data
                                                                   options:NSJSONReadingMutableContainers
@@ -321,16 +323,19 @@ NSInteger const PNLiteResponseStatusOK = 200;
     NSDictionary *bid;
     if (self.isUsingOpenRTB) {
         NSError *error;
-        NSString *escapedContent = [[[adContent
-            stringByReplacingOccurrencesOfString:@"<" withString:@"\\u003c"]
-            stringByReplacingOccurrencesOfString:@">" withString:@"\\u003e"]
-            stringByReplacingOccurrencesOfString:@"&" withString:@"\\u0026"];
+        NSString *escapedContent = [HyBidStringUtils safeReplaceInValue:adContent target:@"<" replacement:@"\\u003c"] ?: adContent;
+        escapedContent = [HyBidStringUtils safeReplaceInValue:escapedContent target:@">" replacement:@"\\u003e"] ?: escapedContent;
+        escapedContent = [HyBidStringUtils safeReplaceInValue:escapedContent target:@"&" replacement:@"\\u0026"] ?: escapedContent;
         NSData *jsonData = [escapedContent dataUsingEncoding:NSUTF8StringEncoding];
-        id jsonObject = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:&error];
-        NSDictionary *seatBid = [jsonObject[@"seatbid"] firstObject];
-        bid = [seatBid[@"bid"] firstObject];
-        NSString *vastString = bid[@"adm"];
-        adContent = vastString;
+        if (jsonData) {
+            id jsonObject = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:&error];
+            NSDictionary *seatBid = [jsonObject[@"seatbid"] firstObject];
+            bid = [seatBid[@"bid"] firstObject];
+            NSString *vastString = bid[@"adm"];
+            adContent = vastString;
+        } else {
+            adContent = nil;
+        }
     }
     
     if ([adContent length] != 0) {
@@ -479,27 +484,13 @@ NSInteger const PNLiteResponseStatusOK = 200;
                     NSInteger assetGroupID = 21;
                     NSInteger type = kHyBidAdTypeHTML;
                     if (self.openRTBAdType == HyBidOpenRTBAdNative) {
-                        #if __has_include(<ATOM/ATOM-Swift.h>)
-                        NSArray<NSString *> *cohorts = [self getCohortsFromRequestURL];
-                        ad = [[HyBidAd alloc] initOpenRTBWithData:adModel withZoneID:self.zoneID withCohorts:cohorts];
-                        #else
                         ad = [[HyBidAd alloc] initOpenRTBWithData:adModel withZoneID:self.zoneID];
-                        #endif
                     } else if (self.openRTBAdType == HyBidOpenRTBAdBanner) {
-                        #if __has_include(<ATOM/ATOM-Swift.h>)
-                        ad = [[HyBidAd alloc] initWithAssetGroupForOpenRTB:assetGroupID withAdContent: adContent withAdType:type withBidObject:bid];
-                        #else
                         ad = [[HyBidAd alloc]initWithAssetGroupForOpenRTB:assetGroupID withAdContent:adContent withAdType:type withBidObject:bid];
-                        #endif
                     }
                    
                 } else {
-                    #if __has_include(<ATOM/ATOM-Swift.h>)
-                    NSArray<NSString *> *cohorts = [self getCohortsFromRequestURL];
-                    ad = [[HyBidAd alloc] initWithData:adModel withZoneID:self.zoneID withCohorts:cohorts];
-                    #else
                     ad = [[HyBidAd alloc] initWithData:adModel withZoneID:self.zoneID];
-                    #endif
                 }
                 
                 ad.isUsingOpenRTB = self.isUsingOpenRTB;
@@ -543,55 +534,6 @@ NSInteger const PNLiteResponseStatusOK = 200;
             [self invokeDidFail:responseError];
         }
 }
-
-#if __has_include(<ATOM/ATOM-Swift.h>)
-- (NSArray<NSString *> *)getCohortsFromRequestURL
-{
-    NSMutableArray<NSString *> *cohorts = [NSMutableArray new];
-    NSString *vgParameter;
-    
-    if (self.requestURL != nil && [self.requestURL.absoluteString length] > 0) {
-        NSURLComponents *urlComponents = [[NSURLComponents alloc] initWithString:self.requestURL.absoluteString];
-        NSArray<NSURLQueryItem *> *queryItems = urlComponents.queryItems;
-        
-        for (NSURLQueryItem *item in queryItems) {
-            if ([item.name isEqualToString:@"vg"]) {
-                vgParameter = item.value;
-                break;
-            }
-        }
-        
-        if (vgParameter != nil && [vgParameter length] > 0) {
-            NSString *decodedVgParameterString = nil;
-            
-            while (decodedVgParameterString == nil || [decodedVgParameterString isEqualToString:@""]) {
-                NSData *decodedVgParameterData = [[NSData alloc] initWithBase64EncodedString:vgParameter options:0];
-                decodedVgParameterString = [[NSString alloc] initWithData:decodedVgParameterData encoding:NSUTF8StringEncoding];
-                
-                // appending here `=` characters as
-                // according to BaseURL protocol, we trimmed all paddings(`=` characters)
-                // before setting the `vg` parameter, to avoid the conversion of
-                // paddings(`=`) into `%3D` during URL encoding part.
-                vgParameter = [vgParameter stringByAppendingString:@"="];
-            }
-            
-            // removing `[` and `]` as we get an array in `decodedVgParameterString`
-            if ([decodedVgParameterString length] > 1) {
-                decodedVgParameterString = [decodedVgParameterString substringFromIndex:1];
-                decodedVgParameterString = [decodedVgParameterString substringToIndex:[decodedVgParameterString length] - 1];
-            }
-            
-            decodedVgParameterString = [decodedVgParameterString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-            
-            if (![decodedVgParameterString isEqualToString:@""]) {
-                [cohorts addObjectsFromArray: [decodedVgParameterString componentsSeparatedByString:@","]];
-            }
-        }
-    }
-    
-    return cohorts;
-}
-#endif
 
 - (void)cacheAd:(HyBidAd *)ad {
     if (self.adCached) {

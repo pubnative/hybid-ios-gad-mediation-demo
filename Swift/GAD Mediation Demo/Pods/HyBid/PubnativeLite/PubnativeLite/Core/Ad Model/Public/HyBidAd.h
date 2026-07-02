@@ -55,10 +55,8 @@ typedef enum : NSUInteger {
 @property (nonatomic, readonly) NSString *bundleID;
 @property (nonatomic, readonly) NSString *adExperience;
 
-#if __has_include(<ATOM/ATOM-Swift.h>)
-@property (nonatomic, readonly) NSArray<NSString *> *cohorts;
-#endif
 @property (nonatomic, strong) HyBidEndCard *customEndCard;
+@property (nonatomic, strong) NSData *mediationWatermarkData;
 @property (nonatomic, readonly) NSNumber *assetGroupID;
 @property (nonatomic, readonly) NSNumber *openRTBAssetGroupID;
 @property (nonatomic, readonly) NSNumber *eCPM;
@@ -78,6 +76,7 @@ typedef enum : NSUInteger {
 @property (nonatomic, readonly) NSString *contentInfoDisplay;
 @property (nonatomic, readonly) NSString *contentInfoText;
 @property (nonatomic, readonly) NSString *adFormat;
+@property (nonatomic, readonly) NSDictionary *jsonData;
 
 //@property (nonatomic, readonly) NSString *contentInfoHorizontalPosition;
 //@property (nonatomic, readonly) NSString *contentInfoVeritcalPosition;
@@ -127,17 +126,11 @@ typedef enum : NSUInteger {
 @property (nonatomic, readonly) NSNumber *customCtaEnabled;
 @property (nonatomic, readonly) NSNumber *sdkAutoStorekitEnabled;
 @property (nonatomic, readonly) NSNumber *pcSDKAutoStorekitEnabled;
-@property (nonatomic, readonly) NSNumber *atomEnabled;
 
 // Reporting Properties:
 @property (nonatomic, assign) BOOL shouldReportCustomEndcardImpression;
 
 - (instancetype)initWithData:(HyBidAdModel *)data withZoneID:(NSString *)zoneID;
-
-#if __has_include(<ATOM/ATOM-Swift.h>)
-- (instancetype)initWithData:(HyBidAdModel *)data withZoneID:(NSString *)zoneID withCohorts:(NSArray<NSString *> *)cohorts;
-- (instancetype)initOpenRTBWithData:(HyBidAdModel *)data withZoneID:(NSString *)zoneID withCohorts:(NSArray<NSString *> *)cohorts;
-#endif
 
 - (instancetype)initOpenRTBWithData:(HyBidAdModel *)data withZoneID:(NSString *)zoneID;
 - (instancetype)initWithAssetGroup:(NSInteger)assetGroup withAdContent:(NSString *)adContent withAdType:(NSInteger)adType;

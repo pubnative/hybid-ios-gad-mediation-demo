@@ -35,7 +35,7 @@
 #import "HyBidStoreKitUtils.h"
 #import "HyBidCustomClickUtil.h"
 #import "HyBidURLDriller.h"
-#import "OMIDAdSessionWrapper.h"
+#import "HyBidOMIDAdSessionWrapper.h"
 
 #define SYSTEM_VERSION_LESS_THAN(v)  ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedAscending)
 
@@ -64,7 +64,7 @@ typedef enum {
     BOOL isScrollable;
     BOOL isExpanded;
 
-    OMIDAdSessionWrapper *adSession;
+    HyBidOMIDAdSessionWrapper *adSession;
     
     // The only property of the MRAID expandProperties we need to keep track of
     // on the native side is the useCustomClose property.
@@ -150,6 +150,7 @@ typedef enum {
 // internal helper methods
 - (void)initWebView:(WKWebView *)wv;
 - (void)parseCommandUrl:(NSString *)commandUrlString prefixToRemove:(NSString *)prefixToRemove;
+- (NSString *)enforceInlineVideoPlaybackForBannerHtml:(NSString *)html;
 
 @property (nonatomic, strong) NSTimer *closeButtonOffsetTimer;
 @property (nonatomic, assign) NSTimeInterval closeButtonTimeElapsed;
@@ -174,6 +175,7 @@ typedef enum {
 @property (nonatomic, assign) BOOL isAutoStoreKit;
 @property (nonatomic, strong) HyBidVASTEventProcessor *vastEventProcessor;
 @property (nonatomic, assign) BOOL shouldHandleInterruptions;
+@property (nonatomic, strong) UIView *watermarkView;
 
 @end
 
@@ -258,6 +260,12 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         isScrollable = canScroll;
         adWidth = frame.size.width;
         adHeight = frame.size.height;
+
+        // Prevent CSS transform overflow for banner ads.
+        // Clipping the view to its bounds closes that escape hatch for non-interstitial ads.
+        if (!isInter) {
+            self.clipsToBounds = YES;
+        }
         _delegate = delegate;
         _serviceDelegate = serviceDelegate;
         _rootViewController = rootViewController;
@@ -305,6 +313,10 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         
         [self setWebViewConstraintsInRelationWithView:self];
         
+        if (!isEndcard) {
+            [self addMediationWatermarkView:self];
+        }
+        
         previousMaxSize = CGSizeZero;
         previousScreenSize = CGSizeZero;
         
@@ -319,6 +331,7 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
             [self htmlFromUrl:baseURL handler:^(NSString *html, NSError *error) {
                 if(html && !error){
                     htmlData = [PNLiteMRAIDUtil processRawHtml:html];
+                    htmlData = [self enforceInlineVideoPlaybackForBannerHtml:htmlData];
                     [self loadHTMLDataWithBaseURL:htmlData];
                 } else {
                     [HyBidLogger errorLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:error.localizedDescription];
@@ -332,6 +345,7 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
             }];
         } else {
             htmlData = [PNLiteMRAIDUtil processRawHtml:htmlData];
+            htmlData = [self enforceInlineVideoPlaybackForBannerHtml:htmlData];
             [self loadHTMLData:htmlData];
         }
         
@@ -340,9 +354,6 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         }
         
         buttonSize = [HyBidCloseButton buttonDefaultSize];
-        if (self.shouldHandleInterruptions) {
-            [[HyBidInterruptionHandler shared] setDelegate:self for:HyBidAdContextMraidView];
-        }
         
         self.landingpageBehaviour = HyBidLandingBehaviourTypeCountdown;
         self.landingpageCloseDelay = landingPageSecondsToCloseAdDelay;
@@ -482,23 +493,52 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
 
 - (void)cancel {
     [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:@"cancel"];
-    [currentWebView stopLoading];
-    currentWebView = nil;
+    
+    // Clean up webView to prevent callbacks to deallocated object
+    if (currentWebView) {
+        [currentWebView stopLoading];
+        currentWebView.navigationDelegate = nil;
+        currentWebView.UIDelegate = nil;
+        currentWebView = nil;
+    }
+    
     [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
 }
 
 - (void)dealloc {
     [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:[NSString stringWithFormat: @"%@ %@", [self.class description], NSStringFromSelector(_cmd)]];
     
-    [self removeObserver:self forKeyPath:@"frame"];
+    // Clean up WKWebView delegates before deallocation to prevent bmalloc crash
+    if (webView) {
+        [webView stopLoading];
+        webView.navigationDelegate = nil;
+        webView.UIDelegate = nil;
+        webView = nil;
+    }
+    
+    if (webViewPart2) {
+        [webViewPart2 stopLoading];
+        webViewPart2.navigationDelegate = nil;
+        webViewPart2.UIDelegate = nil;
+        webViewPart2 = nil;
+    }
+    
+    if (currentWebView && currentWebView != webView && currentWebView != webViewPart2) {
+        [currentWebView stopLoading];
+        currentWebView.navigationDelegate = nil;
+        currentWebView.UIDelegate = nil;
+    }
+    currentWebView = nil;
+    
+    @try {
+        [self removeObserver:self forKeyPath:@"frame"];
+    } @catch (NSException *exception) {
+        [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:[NSString stringWithFormat:@"Exception removing observer: %@", exception]];
+    }
+    
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
     
-    [[HyBidInterruptionHandler shared] deactivateContext:HyBidAdContextMraidView];
-
-    webView = nil;
-    webViewPart2 = nil;
-    currentWebView = nil;
     navigatorGeolocation = nil;
     
     mraidParser = nil;
@@ -533,6 +573,8 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
     self.storekitDelayTimeElapsed = 0;
     self.storekitDelayTimerStartDate = nil;
     self.vastEventProcessor = nil;
+    [self removeView:self.watermarkView];
+    self.watermarkView = nil;
 }
 
 - (BOOL)isValidFeatureSet:(NSArray *)features {
@@ -762,10 +804,13 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
 - (void)close {
     [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:[NSString stringWithFormat: @"JS callback %@", NSStringFromSelector(_cmd)]];
     
+    if (self.shouldHandleInterruptions && !modalVC) {
+        [[HyBidInterruptionHandler shared] deactivateContext:HyBidAdContextMraidView];
+    }
+
     if (state == PNLiteMRAIDStateLoading ||
         (state == PNLiteMRAIDStateDefault && !isInterstitial) ||
         state == PNLiteMRAIDStateHidden) {
-        // do nothing
         return;
     }
     
@@ -786,15 +831,21 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
     if (modalVC) {
         [self removeView: closeButton];
         [currentWebView removeFromSuperview];
+        __weak typeof(self) weakSelf = self;
         if ([modalVC respondsToSelector:@selector(dismissViewControllerAnimated:completion:)]) {
-            // used if running >= iOS 6
-            [modalVC dismissViewControllerAnimated:NO completion:nil];
+            [modalVC dismissViewControllerAnimated:NO completion:^{
+                if (weakSelf.shouldHandleInterruptions) {
+                    [[HyBidInterruptionHandler shared] deactivateContext:HyBidAdContextMraidView];
+                }
+            }];
         } else {
-            // Turn off the warning about using a deprecated method.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             [modalVC dismissModalViewControllerAnimated:NO];
 #pragma clang diagnostic pop
+            if (self.shouldHandleInterruptions) {
+                [[HyBidInterruptionHandler shared] deactivateContext:HyBidAdContextMraidView];
+            }
         }
     }
     
@@ -994,6 +1045,8 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
 #pragma clang diagnostic pop
     }
     
+    [self addMediationWatermarkView:modalVC.view];
+    
     if (!isInterstitial) {
         [self addContentInfoViewToView:modalVC.view];
         state = PNLiteMRAIDStateExpanded;
@@ -1005,8 +1058,8 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         [self determineUseCustomCloseBehaviourWith:self.nativeCloseButtonDelay showSkipOverlay:YES];
     }
     
-    if (self.shouldHandleInterruptions && ![[[HyBidInterruptionHandler shared] activeDelegate] isMemberOfClass:[HyBidMRAIDView class]]) {
-        [[HyBidInterruptionHandler shared] activateContext:HyBidAdContextMraidView];
+    if (self.shouldHandleInterruptions) {
+        [[HyBidInterruptionHandler shared] activateContext:HyBidAdContextMraidView with:self];
     }
     
     if(state == PNLiteMRAIDStateExpanded){
@@ -1191,6 +1244,7 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         resizeView = [[UIView alloc] initWithFrame:resizeFrame];
         [webView removeFromSuperview];
         [resizeView addSubview:webView];
+        [self addMediationWatermarkView:resizeView];
         [self addContentInfoViewToView:webView];
         [self.rootViewController.view addSubview:resizeView];
     }
@@ -2099,6 +2153,22 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
     return (skanModel.productParameters[HyBidSKAdNetworkParameter.itunesitem] != nil && [skanModel.productParameters[HyBidSKAdNetworkParameter.itunesitem] isKindOfClass:[NSString class]]);
 }
 
+// Keeps banner videos playing inline instead of taking over the screen in the native player.
+// Adds `playsinline` to any <video> already in the markup. Videos added later by JS are handled
+// in createConfiguration. The lookahead skips tags that already have it.
+- (NSString *)enforceInlineVideoPlaybackForBannerHtml:(NSString *)html {
+    if (isInterstitial || html == nil) {
+        return html;
+    }
+    NSRegularExpression *playsinlineRegex = [NSRegularExpression regularExpressionWithPattern:@"<video(?![^>]*\\splaysinline)(\\s|>|/)"
+        options:NSRegularExpressionCaseInsensitive
+        error:NULL];
+    return [playsinlineRegex stringByReplacingMatchesInString:html
+                             options:0
+                             range:NSMakeRange(0, [html length])
+                             withTemplate:@"<video playsinline$1"];
+}
+
 - (WKWebViewConfiguration *)createConfiguration {
     WKUserContentController *wkUController = [[WKUserContentController alloc] init];
     WKWebViewConfiguration *webConfiguration = [[WKWebViewConfiguration alloc] init];
@@ -2107,19 +2177,58 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
     if ([supportedFeatures containsObject:PNLiteMRAIDSupportsInlineVideo]) {
         webConfiguration.allowsInlineMediaPlayback = YES;
         webConfiguration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeNone;
+
+        // For banner ads only: without `playsinline` on a <video> element, iOS launches
+        // the native AVKit fullscreen player when autoplay fires, regardless of
+        // allowsInlineMediaPlayback = YES. Injected at AtDocumentStart so the
+        // MutationObserver is in place before any page script (e.g. Video.js) runs
+        // and creates <video> elements. forMainFrameOnly:NO covers nested iframes.
+        if (!isInterstitial) {
+            NSString *playsinlineJS =
+                @"(function() {"
+                @"  function enforcePlaysinline(node) {"
+                @"    if (node.nodeName === 'VIDEO') {"
+                @"      node.setAttribute('playsinline', '');"
+                @"      node.setAttribute('webkit-playsinline', '');"
+                @"    }"
+                @"  }"
+                @"  document.querySelectorAll('video').forEach(enforcePlaysinline);"
+                @"  new MutationObserver(function(mutations) {"
+                @"    mutations.forEach(function(m) {"
+                @"      m.addedNodes.forEach(function(n) {"
+                @"        if (n.nodeType === 1) {"
+                @"          enforcePlaysinline(n);"
+                @"          n.querySelectorAll && n.querySelectorAll('video').forEach(enforcePlaysinline);"
+                @"        }"
+                @"      });"
+                @"    });"
+                @"  }).observe(document.documentElement, { childList: true, subtree: true });"
+                @"})();";
+            WKUserScript *playsinlineScript = [[WKUserScript alloc]
+                initWithSource:playsinlineJS
+                 injectionTime:WKUserScriptInjectionTimeAtDocumentStart
+              forMainFrameOnly:NO];
+            [wkUController addUserScript:playsinlineScript];
+        }
     } else {
         webConfiguration.allowsInlineMediaPlayback = NO;
         webConfiguration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeAll;
         [HyBidLogger warningLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:[NSString stringWithFormat:@"No inline video support has been included, videos will play full screen without autoplay."]];
     }
-    
+
     return webConfiguration;
 }
+
 
 - (void)initWebView:(WKWebView *)wv {
     wv.navigationDelegate = self;
     wv.UIDelegate = self;
     wv.opaque = NO;
+
+    // For banner ads, clip the webview so that CSS-transformed content cannot visually overflow the declared ad bounds.
+    if (!isInterstitial) {
+        wv.clipsToBounds = YES;
+    }
     
 #if DEBUG
     if (@available(iOS 16.4, *)) {
@@ -2509,6 +2618,65 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
     if (!isInterstitial || [skAdNetworkModel.productParameters objectForKey:HyBidSKAdNetworkParameter.click] == [NSNull null] || ![[skAdNetworkModel.productParameters objectForKey:HyBidSKAdNetworkParameter.click] boolValue]) { return; }
     
     [self trackClickForSKOverlayWithClickType: HyBidSKOverlayAutomaticCLickVideo isFirstPresentation:isFirstPresentation];
+}
+
+#pragma mark - Watermark
+
+- (void)addMediationWatermarkView:(UIView *)view {
+    if (!view || !self.ad) {
+        return;
+    }
+    NSData *pngData = self.ad.mediationWatermarkData;
+    if (!pngData || pngData.length == 0) {
+        return;
+    }
+
+    UIImage *patternImage = [UIImage imageWithData:pngData
+                                             scale:[UIScreen mainScreen].scale];
+    if (!patternImage) return;
+
+    if (!self.watermarkView) {
+        UIView *overlay = [[UIView alloc] initWithFrame:CGRectZero];
+        overlay.userInteractionEnabled = NO;
+        self.watermarkView = overlay;
+    }
+    self.watermarkView.backgroundColor = [UIColor colorWithPatternImage:patternImage];
+
+    if (self.watermarkView.superview != view) {
+        [self.watermarkView removeFromSuperview];
+
+        if (currentWebView && currentWebView.superview == view) {
+            [view insertSubview:self.watermarkView aboveSubview:currentWebView];
+        } else {
+            [view addSubview:self.watermarkView];
+        }
+
+        self.watermarkView.translatesAutoresizingMaskIntoConstraints = NO;
+
+        if (@available(iOS 11.0, *)) {
+            UILayoutGuide *safe = view.safeAreaLayoutGuide;
+            [NSLayoutConstraint activateConstraints:@[
+                [self.watermarkView.topAnchor constraintEqualToAnchor:safe.topAnchor],
+                [self.watermarkView.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor],
+                [self.watermarkView.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor],
+                [self.watermarkView.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor]
+            ]];
+        } else {
+            [NSLayoutConstraint activateConstraints:@[
+                [self.watermarkView.topAnchor constraintEqualToAnchor:view.topAnchor],
+                [self.watermarkView.bottomAnchor constraintEqualToAnchor:view.bottomAnchor],
+                [self.watermarkView.leadingAnchor constraintEqualToAnchor:view.leadingAnchor],
+                [self.watermarkView.trailingAnchor constraintEqualToAnchor:view.trailingAnchor]
+            ]];
+        }
+
+        if (adSession) {
+            [[HyBidViewabilityWebAdSession sharedInstance] addFriendlyObstruction:self.watermarkView
+                                                                 toOMIDAdSession:adSession
+                                                                      withReason:@"This view is a non-interactive watermark overlay"
+                                                                  isInterstitial:isInterstitial];
+        }
+    }
 }
 
 @end

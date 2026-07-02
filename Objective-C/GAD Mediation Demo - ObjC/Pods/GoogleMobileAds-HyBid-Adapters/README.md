@@ -24,7 +24,7 @@ It will install HyBid Adapters, as well as HyBid iOS SDK and Google Mobile Ads i
 
 ```ruby
 platform :ios, '12.0'
-pod 'GoogleMobileAds-HyBid-Adapters', '3.7.0.0'
+pod 'GoogleMobileAds-HyBid-Adapters', '3.9.0.0'
 ```
 
 2. Run `pod install --repo-update` to install the pod in your project.
@@ -32,6 +32,19 @@ pod 'GoogleMobileAds-HyBid-Adapters', '3.7.0.0'
 4. If needed, implement Google Mobile Ads iOS SDK, for [GAM (DFP)](https://developers.google.com/ad-manager/mobile-ads-sdk/ios/quick-start) and/or [GAD (AdMob)](https://developers.google.com/admob/ios/quick-start) in your application.
 5. Based on your needs, define custom events using [Header Bidding](https://github.com/pubnative/pubnative-hybid-ios-sdk/wiki/Setup-GAM-(DFP)) and/or [Mediation](https://github.com/pubnative/pubnative-hybid-ios-sdk/wiki/GAD-(AdMob)-Mediation) pages to finish the integration.
 6. You’re done.
+
+#### Swift Package Manager
+The Swift Package Manager is a tool for managing the distribution of Swift code. It’s integrated with the Swift build system to automate the process of downloading, compiling, and linking dependencies. It will install HyBid Adapters, as well as HyBid iOS SDK and Google Mobile Ads iOS SDK (If not installed already).
+
+To integrate the GoogleMobileAds-HyBid-Adapters into your Xcode project using Swift Package Manager: 
+
+Add it to the dependencies of your Package.swift:
+```swift
+dependencies: [
+    .package(url: "https://github.com/pubnative/googleMobileAds-hybid-adapters-ios", branch:"master")
+]
+```
+Enable the -ObjC flag in Xcode: click on your project settings, go to Build Settings, search for Other Linker Flags and add -ObjC.
 
 #### Manually
 

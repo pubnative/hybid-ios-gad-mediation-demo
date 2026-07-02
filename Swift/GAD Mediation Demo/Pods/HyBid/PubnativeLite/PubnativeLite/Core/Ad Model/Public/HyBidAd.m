@@ -13,7 +13,6 @@
 #import "HyBidOpenRTBAdModel.h"
 #import "HyBid.h"
 #import "HyBidSKAdNetworkParameter.h"
-#import "HyBidATOMFlow.h"
 
 #if __has_include(<HyBid/HyBid-Swift.h>)
     #import <HyBid/HyBid-Swift.h>
@@ -36,10 +35,6 @@ NSString *const ContentInfoViewIcon = @"https://cdn.pubnative.net/static/adserve
 @property (nonatomic, strong)NSString *_zoneID;
 @property (nonatomic, readwrite)NSString *adFormat;
 
-#if __has_include(<ATOM/ATOM-Swift.h>)
-@property (nonatomic, strong)NSArray<NSString *> *_cohorts;
-#endif
-
 @end
 
 @implementation HyBidAd
@@ -49,10 +44,6 @@ NSString *const ContentInfoViewIcon = @"https://cdn.pubnative.net/static/adserve
     self.contentInfoView = nil;
     self._zoneID = nil;
     self.customEndCard = nil;
-    
-    #if __has_include(<ATOM/ATOM-Swift.h>)
-    self._cohorts = nil;
-    #endif
 }
 
 #pragma mark HyBidAd
@@ -81,31 +72,6 @@ NSString *const ContentInfoViewIcon = @"https://cdn.pubnative.net/static/adserve
         }
     }
 }
-
-#if __has_include(<ATOM/ATOM-Swift.h>)
-- (instancetype)initWithData:(HyBidAdModel *)data withZoneID:(NSString *)zoneID withCohorts:(NSArray<NSString *> *)cohorts
-{
-    self = [super init];
-    if (self) {
-        self.data = data;
-        self._zoneID = zoneID;
-        self._cohorts = cohorts;
-        [self saveAdFormat:data];
-    }
-    return self;
-}
-
-- (instancetype)initOpenRTBWithData:(HyBidOpenRTBAdModel *)data withZoneID:(NSString *)zoneID withCohorts:(NSArray<NSString *> *)cohorts {
-    self = [super init];
-    if (self) {
-        self.openRTBData = data;
-        self._zoneID = zoneID;
-        self._cohorts = cohorts;
-        [self saveAdFormat:data];
-    }
-    return self;
-}
-#endif
 
 - (instancetype)initOpenRTBWithData:(HyBidOpenRTBAdModel *)data withZoneID:(NSString *)zoneID {
     self = [super init];
@@ -174,13 +140,6 @@ NSString *const ContentInfoViewIcon = @"https://cdn.pubnative.net/static/adserve
 - (NSString *)zoneID {
     return self._zoneID;
 }
-
-#if __has_include(<ATOM/ATOM-Swift.h>)
-- (NSArray<NSString *> *)cohorts
-{
-    return self._cohorts;
-}
-#endif
 
 - (NSString *)vast {
     NSString *result = nil;
@@ -547,12 +506,24 @@ NSString *const ContentInfoViewIcon = @"https://cdn.pubnative.net/static/adserve
 }
 
 - (NSNumber *)sdkAutoStorekitDelay {
+    NSNumber *sdkAutoStorekitDelayInputValue = [self sdkAutoStorekitDelayInputValue];
+    if (sdkAutoStorekitDelayInputValue) { return sdkAutoStorekitDelayInputValue; }
+    
     NSNumber *result = nil;
     NSDictionary *jsonDictionary = [self jsonData];
     if (jsonDictionary) {
         if ([jsonDictionary objectForKey:PNLiteData.sdkAutoStorekitDelay] != (id)[NSNull null]) {
             result = [jsonDictionary objectForKey:PNLiteData.sdkAutoStorekitDelay];
         }
+    }
+    return result;
+}
+
+- (NSNumber *)sdkAutoStorekitDelayInputValue {
+    NSNumber *result = nil;
+    NSDictionary *jsonDictionary = [self jsonData];
+    if (jsonDictionary && [jsonDictionary objectForKey:PNLiteData.sdkAutoStorekitDelayInputValue] != (id)[NSNull null]) {
+        result = [jsonDictionary objectForKey:PNLiteData.sdkAutoStorekitDelayInputValue];
     }
     return result;
 }
@@ -863,6 +834,9 @@ NSString *const ContentInfoViewIcon = @"https://cdn.pubnative.net/static/adserve
 }
 
 - (NSNumber *)customCtaEnabled {
+    NSNumber *customCtaEnabledInputValue = [self customCtaEnabledInputValue];
+    if (customCtaEnabledInputValue) { return customCtaEnabledInputValue; }
+    
     NSNumber *result = nil;
     NSDictionary *jsonDictionary = [self jsonData];
     if (jsonDictionary) {
@@ -873,13 +847,46 @@ NSString *const ContentInfoViewIcon = @"https://cdn.pubnative.net/static/adserve
     return result;
 }
 
-- (NSNumber *)customCtaDelay {
+- (NSNumber *)customCtaEnabledInputValue {
     NSNumber *result = nil;
     NSDictionary *jsonDictionary = [self jsonData];
-    if (jsonDictionary) {
-        if ([jsonDictionary objectForKey:PNLiteData.customCtaDelay] != (id)[NSNull null]) {
-            result = [jsonDictionary objectForKey:PNLiteData.customCtaDelay];
-        }
+    if (jsonDictionary && [jsonDictionary objectForKey:PNLiteData.customCtaEnabledInputValue] != (id)[NSNull null]) {
+        result = [jsonDictionary objectForKey:PNLiteData.customCtaEnabledInputValue];
+    }
+    return result;
+}
+
+- (NSNumber *)customCtaDelay {
+    NSNumber *customCtaDelayInputValue = [self customCtaDelayInputValue];
+    if (customCtaDelayInputValue) { return customCtaDelayInputValue; }
+    
+    NSNumber *result = nil;
+    NSDictionary *jsonDictionary = [self jsonData];
+    if (jsonDictionary && [jsonDictionary objectForKey:PNLiteData.customCtaDelay] != (id)[NSNull null]) {
+        result = [jsonDictionary objectForKey:PNLiteData.customCtaDelay];
+    }
+    return result;
+}
+
+- (NSNumber *)customCtaDelayInputValue {
+    NSNumber *result = nil;
+    NSDictionary *jsonDictionary = [self jsonData];
+    if (jsonDictionary && [jsonDictionary objectForKey:PNLiteData.customCtaDelayInputValue] != (id)[NSNull null]) {
+        result = [jsonDictionary objectForKey:PNLiteData.customCtaDelayInputValue];
+    }
+    return result;
+}
+
+- (NSString *)customCtaIconURL {
+    NSString *customCtaInputValue = [self customCtaInputValue];
+    if (customCtaInputValue) {
+        return customCtaInputValue;
+    }
+    
+    NSString *result = nil;
+    HyBidDataModel *data = [self assetDataWithType:PNLiteAsset.customCTA];
+    if (data) {
+        result = [data stringFieldWithKey:@"icon"];
     }
     return result;
 }
@@ -902,20 +909,6 @@ NSString *const ContentInfoViewIcon = @"https://cdn.pubnative.net/static/adserve
         if ([jsonDictionary objectForKey:PNLiteData.itunesIdValue] != (id)[NSNull null]) {
             result = [jsonDictionary objectForKey:PNLiteData.itunesIdValue];
         }
-    }
-    return result;
-}
-
-- (NSString *)customCtaIconURL {
-    NSString *customCtaInputValue = [self customCtaInputValue];
-    if (customCtaInputValue) {
-        return customCtaInputValue;
-    }
-    
-    NSString *result = nil;
-    HyBidDataModel *data = [self assetDataWithType:PNLiteAsset.customCTA];
-    if (data) {
-        result = [data stringFieldWithKey:@"icon"];
     }
     return result;
 }
