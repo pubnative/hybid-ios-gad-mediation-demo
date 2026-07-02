@@ -14,6 +14,7 @@
 #import "HyBidDisplayManager.h"
 #import "HyBidAPI.h"
 #import "HyBidProtocol.h"
+#import "HyBidStringUtils.h"
 #import <CoreLocation/CoreLocation.h>
 
 #if __has_include(<HyBid/HyBid-Swift.h>)
@@ -22,10 +23,6 @@
 #else
     #import <UIKit/UIKit.h>
     #import "HyBid-Swift.h"
-#endif
-
-#if __has_include(<ATOM/ATOM-Swift.h>)
-    #import <ATOM/ATOM-Swift.h>
 #endif
 
 @interface PNLiteAdFactory ()
@@ -168,8 +165,8 @@
     
     NSString* gppSID = [[HyBidUserDataManager sharedInstance] getInternalGPPSID];
     if (gppSID != nil && !([gppSID length] == 0)) {
-        self.adRequestModel.requestParameters[HyBidRequestParameter.gppsid] = [gppSID stringByReplacingOccurrencesOfString:@"_"
-                                                                                                                    withString:@","];;
+        gppSID = [HyBidStringUtils safeReplaceInValue:gppSID target:@"_" replacement:@","] ?: gppSID;
+        self.adRequestModel.requestParameters[HyBidRequestParameter.gppsid] = gppSID;
     }
     
     if (![HyBidConsentConfig sharedConfig].coppa && ![[HyBidUserDataManager sharedInstance] isCCPAOptOut] && ![[HyBidUserDataManager sharedInstance] isConsentDenied]) {
@@ -217,7 +214,7 @@
         self.adRequestModel.requestParameters[HyBidRequestParameter.sessionDuration] = sessionDuration;
     }
     
-    NSDictionary *impressionDepth = [[HyBidSessionManager sharedInstance] impressionCounter];
+    NSDictionary *impressionDepth = [[HyBidSessionManager sharedInstance] safeImpressionCounter];
     if (impressionDepth && [impressionDepth count] != 0) {
         NSString *value = impressionDepth[zoneID];
         self.adRequestModel.requestParameters[HyBidRequestParameter.impressionDepth] = [NSString stringWithFormat:@"%@", value];
@@ -228,18 +225,6 @@
         self.adRequestModel.requestParameters[HyBidRequestParameter.ageOfApp] = ageOfApp;
     }
 
-    #if __has_include(<ATOM/ATOM-Swift.h>)
-    SEL vgParameterBase64StringSelector = NSSelectorFromString(@"vgParameterBase64String");
-    
-    if ([Atom respondsToSelector: vgParameterBase64StringSelector]) {
-        NSString *vgParameter = [Atom performSelector:vgParameterBase64StringSelector];
-        
-        if (vgParameter != nil) {
-            self.adRequestModel.requestParameters[HyBidRequestParameter.vg] = vgParameter;
-        }
-    }
-    #endif
-    
     [self setDefaultMetaFields:self.adRequestModel];
     [self setDisplayManager:self.adRequestModel withIntegrationType:integrationType];
     [self setSupportedAPIs:self.adRequestModel];

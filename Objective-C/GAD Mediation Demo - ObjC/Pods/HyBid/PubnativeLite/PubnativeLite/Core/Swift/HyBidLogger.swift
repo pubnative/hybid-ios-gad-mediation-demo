@@ -9,7 +9,7 @@ import Foundation
 @objc
 public class HyBidLogger: NSObject {
     
-    public static var logLevel: HyBidLogLevel = HyBidLogLevelInfo
+    public nonisolated(unsafe) static var logLevel: HyBidLogLevel = HyBidLogLevelInfo
     
     @objc(setLogLevel:)
     public static func setLogLevel(_ logLevel: HyBidLogLevel) {
@@ -18,7 +18,7 @@ public class HyBidLogger: NSObject {
             "Error",
             "Warning",
             "Info",
-            "Debug",
+            "Debug"
         ]
         
         let levelName = levelNames[Int(logLevel.rawValue)]
@@ -66,4 +66,5 @@ public class HyBidLogger: NSObject {
         
         print("\n ----------------------- \n [LOG TYPE]: \(logLevelString)\n [CLASS]: \(className)\n [METHOD]: \(fromMethod) \n [withMessage]: \(withMessage)\n -----------------------");
     }
+    
 }
