@@ -56,11 +56,15 @@
 + (NSString *)customEndcardDisplay;
 + (NSString *)creativeAutoStorekitEnabled;
 + (NSString *)customCtaEnabled;
++ (NSString *)customCtaEnabledInputValue;
 + (NSString *)customCtaDelay;
++ (NSString *)customCtaDelayInputValue;
 + (NSString *)customCtaInputValue;
 + (NSString *)sdkAutoStorekitEnabled;
 + (NSString *)pcSDKAutoStorekitEnabled;
 + (NSString *)sdkAutoStorekitDelay;
++ (NSString *)sdkAutoStorekitDelayInputValue;
++ (NSString *)suppressAutoClick;
 + (NSString *)itunesIdValue;
 + (NSString *)reducedIconSizes;
 + (NSString *)reducedIconSizesInputValue;
@@ -73,5 +77,10 @@
 + (NSString *)ctaButtonSizeInputValue;
 + (NSString *)ctaButtonLocation;
 + (NSString *)ctaButtonLocationInputValue;
++ (NSString *)clickThroughTimer;
++ (NSString *)pcClickThroughTimer;
++ (NSString *)bcClickThroughTimer;
++ (NSString *)closeButtonTouchSize;
++ (NSString *)closeButtonInitialTouchSize;
 
 @end

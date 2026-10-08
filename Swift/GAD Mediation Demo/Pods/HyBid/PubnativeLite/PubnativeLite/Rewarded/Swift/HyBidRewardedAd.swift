@@ -28,6 +28,7 @@ public class HyBidRewardedAd: NSObject {
     @objc public var ad: HyBidAd?
     @objc public var isReady = false
     @objc public var isMediation = false
+    @objc public var mediationWatermarkData: Data?
     @objc public var isAutoCacheOnLoad: Bool {
         set {
             self.rewardedAdRequest?.isAutoCacheOnLoad = newValue
@@ -208,9 +209,6 @@ public class HyBidRewardedAd: NSObject {
             }
             if initialLoadTimestamp < adExpireTime {
                 self.rewardedPresenter?.show()
-                if let adSessionData = self.adSessionData {
-                    ATOMManager.fireAdSessionEvent(with: adSessionData)
-                }
             } else {
                 HyBidLogger.errorLog(fromClass: String(describing: HyBidRewardedAd.self), fromMethod: #function, withMessage: "Ad has expired")
                 self.cleanUp()
@@ -247,13 +245,15 @@ public class HyBidRewardedAd: NSObject {
     }
     @objc
     public func renderAd(ad: HyBidAd) {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.renderAd(ad: ad)
+            }
+            return
+        }
         let rewardedPresenterFactory = HyBidRewardedPresenterFactory()
         if let skipOffset = self.htmlSkipOffset?.offset?.intValue, skipOffset >= 0 {
-            if skipOffset >= HyBidSkipOffset.DEFAULT_REWARDED_HTML_MAX_SKIP_OFFSET {
-                self.rewardedPresenter = rewardedPresenterFactory.createRewardedPresenter(with: ad, withHTMLSkipOffset: UInt(HyBidSkipOffset.DEFAULT_REWARDED_HTML_MAX_SKIP_OFFSET), withCloseOnFinish: self.closeOnFinish, with: HyBidRewardedPresenterWrapper(parent: self))
-            } else {
-                self.rewardedPresenter = rewardedPresenterFactory.createRewardedPresenter(with: ad, withHTMLSkipOffset: UInt(skipOffset), withCloseOnFinish: self.closeOnFinish, with: HyBidRewardedPresenterWrapper(parent: self))
-            }
+            self.rewardedPresenter = rewardedPresenterFactory.createRewardedPresenter(with: ad, withHTMLSkipOffset: UInt(skipOffset), withCloseOnFinish: self.closeOnFinish, with: HyBidRewardedPresenterWrapper(parent: self))
         } else {
             let skipOffset = HyBidSkipOffset(offset: NSNumber(value: HyBidSkipOffset.DEFAULT_REWARDED_HTML_SKIP_OFFSET), isCustom: false);
             self.rewardedPresenter = rewardedPresenterFactory.createRewardedPresenter(with: ad, withHTMLSkipOffset: UInt(skipOffset.offset?.intValue ?? 0), withCloseOnFinish: self.closeOnFinish, with: HyBidRewardedPresenterWrapper(parent: self))
@@ -321,6 +321,12 @@ public class HyBidRewardedAd: NSObject {
     }
     
     func invokeDidFailWithError(error: Error) {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.invokeDidFailWithError(error: error)
+            }
+            return
+        }
         if HyBidSDKConfig.sharedConfig.reporting {
             if let initialLoadTimestamp = self.initialLoadTimestamp, initialLoadTimestamp != -1 {
                 self.loadReportingProperties[Common.TIME_TO_LOAD] = String(format: "%f", elapsedTimeSince(initialLoadTimestamp))
@@ -394,6 +400,10 @@ public class HyBidRewardedAd: NSObject {
         }
     }
     
+    @objc(setMediationWatermark:)
+    public func setMediationWatermark(_ pngData: Data?) {
+        self.mediationWatermarkData = pngData
+    }
 }
 
 // MARK: - HyBidAdRequestDelegate
@@ -414,9 +424,9 @@ extension HyBidRewardedAd {
         
         if let ad = ad {
             self.ad = ad
-            self.adSessionData = ATOMManager.createAdSessionData(from: request, ad: ad)
             self.determineSkipOffsetValuesFor(ad)
             self.ad?.adType = Int(kHyBidAdTypeVideo)
+            self.ad?.mediationWatermarkData = self.mediationWatermarkData
             self.determineCloseOnFinishFor(ad)
             self.renderAd(ad: ad)
         } else {
@@ -474,7 +484,6 @@ extension HyBidRewardedAd {
 extension HyBidRewardedAd {
     func signalDataDidFinish(with ad: HyBidAd) {
         self.ad = ad
-        self.adSessionData = ATOMManager.createAdSessionData(from: nil, ad: ad)
         self.ad?.adType = Int(kHyBidAdTypeVideo)
         self.renderAd(ad: ad)
     }

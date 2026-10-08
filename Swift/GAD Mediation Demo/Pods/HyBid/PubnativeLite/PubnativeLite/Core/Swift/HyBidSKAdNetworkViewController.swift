@@ -29,15 +29,26 @@ public class HyBidSKAdNetworkViewController: NSObject {
         }
     }
     private var isStoreKitViewBeingPresented = false
-    private var skStoreProductViewController : SKStoreProductViewController?
+    var skStoreProductViewController : SKStoreProductViewController?
     private var ad: HyBidAd?
     @objc public var avoidAutoStoreKitPresentationAfterReplay = false
-    private var rootViewController : UIViewController? = .none
+    var topViewControllerProvider: () -> UIViewController? = { UIApplication.shared.topViewController }
     
     @available(iOS 17.4, *)
-    private func loadStoreKitViewAAK(parameters: [String : Any], adFormat: String, isAutoStoreKitView: Bool) async {
-        guard let ad, let impression = await HyBidAdAttributionManager.getAppImpression(ad: ad, adFormat: adFormat, aakAdType: isAutoStoreKitView ? .autoStoreKitView : .storeKitView) else {
-            return self.loadStoreKitView(parameters: parameters, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView)
+    private func loadStoreKitViewAAK(parameters: [String : Any], adFormat: String, isAutoStoreKitView: Bool, preferredPresenter: UIViewController?) async {
+        let aakAdType: HyBidAdAttributionAdType = isAutoStoreKitView ? .autoStoreKitView : .storeKitView
+        guard Self.canLoadStoreKitProductWithAAK(parameters: parameters) else {
+            let message = "Falling back to legacy StoreKit loading because AdAttributionKit does not support binary product parameters."
+            HyBidLogger.warningLog(fromClass: String(describing: HyBidSKAdNetworkViewController.self), fromMethod: #function, withMessage: message)
+            if HyBidSDKConfig.sharedConfig.reporting {
+                let eventType = EventType.AD_ATTRIBUTION_KIT_APP_IMPRESSION_ERROR.replacingOccurrences(of: EventType.AD_ATTRIBUTION_KIT_AD_TYPE_MACRO, with: aakAdType.rawValue)
+                HyBid.reportingManager().reportEvent(for: HyBidReportingEvent(with: eventType, errorMessage: message))
+            }
+            return self.loadStoreKitView(parameters: parameters, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView, preferredPresenter: preferredPresenter)
+        }
+        guard let ad,
+              let impression = await HyBidAdAttributionManager.getAppImpression(ad: ad, adFormat: adFormat, aakAdType: aakAdType) else {
+            return self.loadStoreKitView(parameters: parameters, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView, preferredPresenter: preferredPresenter)
         }
         do {
 #if !targetEnvironment(simulator)
@@ -50,28 +61,29 @@ public class HyBidSKAdNetworkViewController: NSObject {
 #endif
             await MainActor.run { [weak self] in
                 guard let self else { return }
-                self.presentStoreKitViewOnTopViewController(handlerController: self, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView)
+                self.presentStoreKitViewOnTopViewController(handlerController: self, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView, preferredPresenter: preferredPresenter)
             }
         } catch {
             _ = self.isStoreKitViewResultSuccessful(error: error)
         }
     }
     
-    private func loadStoreKitView(parameters: [String : Any], adFormat: String, isAutoStoreKitView: Bool) {
+    private func loadStoreKitView(parameters: [String : Any], adFormat: String, isAutoStoreKitView: Bool, preferredPresenter: UIViewController?) {
         self.skStoreProductViewController?.loadProduct(withParameters: parameters) { success, error in
 #if !targetEnvironment(simulator)
             guard self.isStoreKitViewResultSuccessful(error: error, success: success) else { return }
 #endif
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
-                self.presentStoreKitViewOnTopViewController(handlerController: self, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView)
+                self.presentStoreKitViewOnTopViewController(handlerController: self, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView, preferredPresenter: preferredPresenter)
             }
         }
     }
     
-    private func presentStoreKitViewOnTopViewController(handlerController: HyBidSKAdNetworkViewController?,
+    func presentStoreKitViewOnTopViewController(handlerController: HyBidSKAdNetworkViewController?,
                                                  adFormat: String,
-                                                 isAutoStoreKitView: Bool) {
+                                                 isAutoStoreKitView: Bool,
+                                                 preferredPresenter: UIViewController?) {
         guard let handlerController, handlerController.isStoreKitViewPresented == false,
               handlerController.isStoreKitViewBeingPresented == false else {
             HyBidLogger.infoLog(fromClass: String(describing: HyBidSKAdNetworkViewController.self), fromMethod: #function, withMessage: "Suppressing an attempt to manual/auto click when task is not finished yet")
@@ -84,16 +96,35 @@ public class HyBidSKAdNetworkViewController: NSObject {
             return
         }
         
+
+        guard let skVC = handlerController.skStoreProductViewController else {
+            handlerController.isStoreKitViewBeingPresented = false
+            handlerController.isStoreKitViewPresented = false
+            return
+        }
+        let livePresenter = preferredPresenter.flatMap { $0.viewIfLoaded?.window != nil ? $0 : nil }
+        guard let presenter = livePresenter ?? self.topViewControllerProvider() else {
+            handlerController.isStoreKitViewBeingPresented = false
+            handlerController.isStoreKitViewPresented = false
+            return
+        }
+
+        handlerController.isStoreKitViewBeingPresented = true
         HyBidInterruptionHandler.shared.productViewControllerIsReadyToShow()
-        handlerController.isStoreKitViewPresented = true
-        guard let skStoreProductViewController = handlerController.skStoreProductViewController else { return }
-        guard let presentationViewController = self.rootViewController ?? UIApplication.shared.topViewController else { return }
-        presentationViewController.present(skStoreProductViewController, animated: true) {
-            handlerController.isStoreKitViewPresented = true
-            handlerController.rootViewController = nil
-            HyBidInterruptionHandler.shared.productViewControllerDidShow(isAutoStoreKitView: isAutoStoreKitView, adFormat: adFormat)
+        //Re-set flag to avoid bug blocking productViewControllerDidFinish call
+        HyBidStoreProductHelper.productViewControllerDidFinishHasBeenCalled = false
+        
+        DispatchQueue.main.async {
+            presenter.present(skVC, animated: true) {
+                handlerController.isStoreKitViewBeingPresented = false
+                handlerController.isStoreKitViewPresented = true
+                HyBidInterruptionHandler.shared.productViewControllerDidShow(
+                    isAutoStoreKitView: isAutoStoreKitView, adFormat: adFormat
+                )
+            }
         }
     }
+
 
     private func isStoreKitViewResultSuccessful(error: Error?, success: Bool = false) -> Bool {
         guard success == false else { return true }
@@ -107,12 +138,16 @@ public class HyBidSKAdNetworkViewController: NSObject {
     
     @objc public func presentStoreKitView(productParameters: Dictionary<String,Any>, adFormat: String,
                                           isAutoStoreKitView: Bool, ad:HyBidAd, rootViewController: UIViewController) {
-        self.rootViewController = rootViewController
-        self.presentStoreKitView(productParameters: productParameters, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView, ad: ad)
+        self.presentStoreKitView(productParameters: productParameters, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView, ad: ad, preferredPresenter: rootViewController)
     }
     
     @objc public func presentStoreKitView(productParameters: Dictionary<String,Any>, adFormat: String,
                                           isAutoStoreKitView: Bool, ad:HyBidAd) {
+        self.presentStoreKitView(productParameters: productParameters, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView, ad: ad, preferredPresenter: nil)
+    }
+    
+    private func presentStoreKitView(productParameters: Dictionary<String,Any>, adFormat: String,
+                                     isAutoStoreKitView: Bool, ad:HyBidAd, preferredPresenter: UIViewController?) {
         guard !productParameters.isEmpty else { return }
         productParametersGlobal = productParameters
         self.ad = ad
@@ -123,20 +158,44 @@ public class HyBidSKAdNetworkViewController: NSObject {
             HyBidInterruptionHandler.shared.productViewControllerWillShow()
 
             if #available(iOS 17.4, *) {
-                Task { [weak self] in
-                    guard let self else { return }
-                    await self.loadStoreKitViewAAK(parameters: productParameters, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView)
-                }
+                self.loadStoreKitViewAAKAsync(parameters: productParameters, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView, preferredPresenter: preferredPresenter)
             } else {
                 DispatchQueue.global().async {
-                    self.loadStoreKitView(parameters: productParameters, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView)
+                    self.loadStoreKitView(parameters: productParameters, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView, preferredPresenter: preferredPresenter)
                 }
             }
+        }
+    }
+
+    @available(iOS 17.4, *)
+    private func loadStoreKitViewAAKAsync(parameters: Dictionary<String,Any>, adFormat: String, isAutoStoreKitView: Bool, preferredPresenter: UIViewController?) {
+        Task { [weak self] in
+            guard let self else { return }
+            await self.loadStoreKitViewAAK(parameters: parameters, adFormat: adFormat, isAutoStoreKitView: isAutoStoreKitView, preferredPresenter: preferredPresenter)
         }
     }
     
     @objc public func isSKProductViewControllerPresented() -> Bool {
         return self.isStoreKitViewPresented
+    }
+
+    @objc public func resetStoreKitPresentationState() {
+        self.isStoreKitViewBeingPresented = false
+    }
+
+    static func canLoadStoreKitProductWithAAK(parameters: [String: Any]) -> Bool {
+        !containsData(parameters)
+    }
+
+    private static func containsData(_ value: Any) -> Bool {
+        if value is Data { return true }
+        if let array = value as? [Any] {
+            return array.contains(where: containsData)
+        }
+        if let dictionary = value as? [AnyHashable: Any] {
+            return dictionary.values.contains(where: containsData)
+        }
+        return false
     }
 }
 
@@ -170,6 +229,9 @@ extension HyBidSKAdNetworkViewController {
 extension HyBidSKAdNetworkViewController: SKStoreProductViewControllerDelegate {
     
     public func productViewControllerDidFinish(_ viewController: SKStoreProductViewController) {
+        self.isStoreKitViewPresented = false
+        self.isStoreKitViewBeingPresented = false
+
         if !HyBidStoreProductHelper.productViewControllerDidFinishHasBeenCalled {
             HyBidInterruptionHandler.shared.productViewControllerDidFinish()
             HyBidStoreProductHelper.productViewControllerDidFinishHasBeenCalled = true
@@ -179,18 +241,6 @@ extension HyBidSKAdNetworkViewController: SKStoreProductViewControllerDelegate {
 
 extension SKStoreProductViewController {
 
-    private enum HyBidOverrideOptionsType {
-        case superClassOption
-        case presentingViewControllerOption
-        case customImplementationOption
-    }
-    
-    open override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        HyBidStoreProductHelper.productViewControllerDidFinishHasBeenCalled = false
-    }
-    
     open override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         super.dismiss(animated: flag, completion: completion)
         
@@ -220,67 +270,5 @@ extension SKStoreProductViewController {
         if #available(iOS 17.2, *) {
             self.loadProduct(withParameters: productParametersGlobal, completionBlock: nil)
         }
-    }
-    
-    open override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        let overrideOption = hyBidDetermineOverrideOption(with: self.presentingViewController, selector: #selector(getter: self.supportedInterfaceOrientations))
-        switch overrideOption {
-        case .superClassOption:
-            return super.supportedInterfaceOrientations
-        case .presentingViewControllerOption:
-            return self.presentingViewController?.supportedInterfaceOrientations ?? super.supportedInterfaceOrientations
-        case .customImplementationOption:
-            return .all
-        }
-    }
-    
-    open override var shouldAutorotate: Bool {
-        let overrideOption = hyBidDetermineOverrideOption(with: presentingViewController, selector: #selector(getter: self.shouldAutorotate))
-        switch overrideOption {
-        case .superClassOption:
-            return super.shouldAutorotate
-        case .presentingViewControllerOption:
-            return presentingViewController?.shouldAutorotate ?? super.shouldAutorotate
-        case .customImplementationOption:
-            let applicationSupportedOrientations = UIApplication.shared.supportedInterfaceOrientations(for: UIApplication.shared.keyWindow)
-            let viewControllerSupportedOrientations = supportedInterfaceOrientations
-            return viewControllerSupportedOrientations.intersection(applicationSupportedOrientations).rawValue != 0
-        }
-    }
-    
-    private func hyBidDetermineOverrideOption(with presentingViewController: UIViewController?, selector: Selector) -> HyBidOverrideOptionsType {
-        
-        guard let presentingViewController = presentingViewController else { return .superClassOption }
-        guard let presentingVCBundleID = Bundle(for: type(of: presentingViewController)).bundleIdentifier else {
-            return .superClassOption
-        }
-        
-        guard let hyBidBundleID = Bundle(for: HyBidSKAdNetworkViewController.self).bundleIdentifier else {
-            return .superClassOption
-        }
-        
-        if presentingVCBundleID != hyBidBundleID {
-            return doesClassHasMethod(cls: type(of: presentingViewController), sel: selector)
-            ? .presentingViewControllerOption
-            : .superClassOption
-        }
-        
-        return .customImplementationOption
-    }
-    
-    private func doesClassHasMethod(cls: AnyClass, sel: Selector) -> Bool {
-        var methodCount: UInt32 = 0
-        guard let methods = class_copyMethodList(cls, &methodCount) else { return false }
-        
-        var result = false
-        for i in 0..<Int(methodCount) {
-            if method_getName(methods[i]) == sel {
-                result = true
-                break
-            }
-        }
-        
-        free(methods)
-        return result
     }
 }

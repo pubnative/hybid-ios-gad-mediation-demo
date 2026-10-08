@@ -56,11 +56,15 @@
 + (NSString *)customEndcardDisplay { return @"custom_endcard_display"; }
 + (NSString *)creativeAutoStorekitEnabled { return @"creative_autostorekit"; }
 + (NSString *)customCtaEnabled { return @"custom_cta_enabled"; }
++ (NSString *)customCtaEnabledInputValue { return @"custom_cta_enabled_input_value"; }
 + (NSString *)customCtaDelay { return @"custom_cta_delay"; }
++ (NSString *)customCtaDelayInputValue { return @"custom_cta_delay_input_value"; }
 + (NSString *)customCtaInputValue { return @"custom_cta_input_value"; }
 + (NSString *)sdkAutoStorekitEnabled { return @"sdk_autostorekit"; }
 + (NSString *)pcSDKAutoStorekitEnabled { return @"pc_sdk_autostorekit"; }
 + (NSString *)sdkAutoStorekitDelay { return @"sdk_autostorekit_delay"; }
++ (NSString *)sdkAutoStorekitDelayInputValue { return @"sdk_autostorekit_delay_input_value"; }
++ (NSString *)suppressAutoClick { return @"suppress_auto_click"; }
 + (NSString *)itunesIdValue { return @"itunesid_value"; }
 + (NSString *)reducedIconSizes { return @"pc_reduced_icon_sizes"; }
 + (NSString *)reducedIconSizesInputValue { return @"pc_reduced_icon_sizes_input_value"; }
@@ -73,5 +77,10 @@
 + (NSString *)ctaButtonSizeInputValue { return @"bc_learn_more_size_input_value"; }
 + (NSString *)ctaButtonLocation { return @"bc_learn_more_location"; }
 + (NSString *)ctaButtonLocationInputValue { return @"bc_learn_more_location_input_value"; }
++ (NSString *)clickThroughTimer { return @"click_through_timer"; }
++ (NSString *)pcClickThroughTimer { return @"pc_click_through_timer"; }
++ (NSString *)bcClickThroughTimer { return @"bc_click_through_timer"; }
++ (NSString *)closeButtonTouchSize { return @"close_button_touch_size"; }
++ (NSString *)closeButtonInitialTouchSize { return @"close_button_initial_touch_size"; }
 
 @end

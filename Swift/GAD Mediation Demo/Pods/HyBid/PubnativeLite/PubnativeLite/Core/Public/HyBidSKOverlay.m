@@ -524,6 +524,12 @@ typedef enum : NSUInteger {
             self.endCardDelayTimeRemaining = -1;
             self.delayTimerNeeded = NO;
             self.endCardDelayTimerCompleted = YES;
+            // Autoclose applies to every SKOverlay presentation, so re-arm it for the end card
+            // presentation (VMI-1711; supersedes the OMI-1998 Scenario 1 sign-off from 2023)
+            if (self.autoCloseTimerCompleted && !self.autoClosePerformsDefaultBehaviour) {
+                self.autoCloseTimerCompleted = NO;
+                self.autoCloseTimeRemaining = self.autoCloseOffset;
+            }
             [self presentWithAd:self.ad];
             break;
     }
@@ -667,21 +673,31 @@ typedef enum : NSUInteger {
     }
 }
 
-// Simulating presenting/dismiss methods to load SKOverlay inmediatly after background mode and avoid its delay. SKOverlayTransitionContext is never use on our logic (no need to create an object of it)
+// Simulating presenting/dismiss methods to load SKOverlay immediately after background mode and avoid its delay. SKOverlayTransitionContext is never use on our logic (no need to create an object of it)
 - (void)simulateSKOverlayMethod:(HyBidSKOverlaySimulateMethod) method {
     if (@available(iOS 14.0, *)) {
-        if (!self.overlay || !self.overlay.delegate) { return; }
-        switch (method) {
-            case HyBidSKOverlayWillStartPresentation:
-                [self.overlay.delegate storeOverlay:self.overlay willStartPresentation: [SKOverlayTransitionContext alloc]];
-                break;
-            case HyBidSKOverlayDidFinishPresentation:
-                [self.overlay.delegate storeOverlay:self.overlay didFinishPresentation: [SKOverlayTransitionContext alloc]];
-                break;
-            case HyBidSKOverlayWillStartDismissal:
-                [self.overlay.delegate storeOverlay:self.overlay willStartDismissal: [SKOverlayTransitionContext alloc]];
-                break;
-        }
+        SKOverlay *overlay = self.overlay;
+        if (!overlay ) { return; }
+
+        __weak typeof(self) weakSelf = self;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (!strongSelf) { return; }
+
+            SKOverlayTransitionContext *context = [SKOverlayTransitionContext alloc];
+
+            switch (method) {
+                case HyBidSKOverlayWillStartPresentation:
+                    [strongSelf storeOverlay:overlay willStartPresentation:context];
+                    break;
+                case HyBidSKOverlayDidFinishPresentation:
+                    [strongSelf storeOverlay:overlay didFinishPresentation:context];
+                    break;
+                case HyBidSKOverlayWillStartDismissal:
+                    [strongSelf storeOverlay:overlay willStartDismissal:context];
+                    break;
+            }
+        });
     }
 }
 
