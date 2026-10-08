@@ -26,6 +26,7 @@ public class HyBidInterstitialAd: NSObject {
     @objc public var ad: HyBidAd?
     @objc public var isReady = false
     @objc public var isMediation = false
+    @objc public var mediationWatermarkData: Data?
     @objc public var isAutoCacheOnLoad: Bool {
         set {
             self.interstitialAdRequest?.isAutoCacheOnLoad = newValue
@@ -45,8 +46,8 @@ public class HyBidInterstitialAd: NSObject {
     private weak var delegate: HyBidInterstitialAdDelegate?
     private var interstitialPresenter: HyBidInterstitialPresenter?
     private var interstitialAdRequest: HyBidInterstitialAdRequest?
-    private var videoSkipOffset: HyBidSkipOffset?
-    private var htmlSkipOffset: HyBidSkipOffset?
+    private(set) var videoSkipOffset: HyBidSkipOffset?
+    private(set) var htmlSkipOffset: HyBidSkipOffset?
     private var initialLoadTimestamp: TimeInterval?
     private var initialRenderTimestamp: TimeInterval?
     private var loadReportingProperties: [String: Any] = [:]
@@ -213,9 +214,6 @@ public class HyBidInterstitialAd: NSObject {
             }
             if initialLoadTimestamp < adExpireTime {
                 self.interstitialPresenter?.show()
-                if let adSessionData = self.adSessionData {
-                    ATOMManager.fireAdSessionEvent(with: adSessionData)
-                }
             } else {
                 HyBidLogger.errorLog(fromClass: String(describing: HyBidInterstitialAd.self), fromMethod: #function, withMessage: "Ad has expired")
                 self.cleanUp()
@@ -254,6 +252,12 @@ public class HyBidInterstitialAd: NSObject {
     }
     @objc
     public func renderAd(ad: HyBidAd) {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.renderAd(ad: ad)
+            }
+            return
+        }
         if let hasEndCard = self.ad?.hasEndCard, !hasEndCard, !(videoSkipOffset?.isCustom ?? false), let hasCustomEndCard = self.ad?.hasCustomEndCard, !hasCustomEndCard {
             self.videoSkipOffset = HyBidSkipOffset(offset: NSNumber(value: HyBidSkipOffset.DEFAULT_SKIP_OFFSET_WITHOUT_ENDCARD), isCustom: false)
         }
@@ -264,11 +268,7 @@ public class HyBidInterstitialAd: NSObject {
         let defaultHtmlSkipOffset = HyBidSkipOffset(offset: NSNumber(value: HyBidSkipOffset.DEFAULT_HTML_SKIP_OFFSET), isCustom: false)
 
         if videoSkipOffset >= 0 && htmlSkipOffset >= 0 {
-            if htmlSkipOffset >= HyBidSkipOffset.DEFAULT_INTERSTITIAL_HTML_MAX_SKIP_OFFSET {
-                self.interstitialPresenter = interstitalPresenterFactory.createInterstitalPresenter(with: ad, withVideoSkipOffset: self.videoSkipOffset, withHTMLSkipOffset: UInt(HyBidSkipOffset.DEFAULT_INTERSTITIAL_HTML_MAX_SKIP_OFFSET), withCloseOnFinish: self.closeOnFinish, with: HyBidInterstitialPresenterWrapper(parent: self))
-            } else {
-                self.interstitialPresenter = interstitalPresenterFactory.createInterstitalPresenter(with: ad, withVideoSkipOffset: self.videoSkipOffset, withHTMLSkipOffset: UInt(htmlSkipOffset), withCloseOnFinish: self.closeOnFinish, with: HyBidInterstitialPresenterWrapper(parent: self))
-            }
+            self.interstitialPresenter = interstitalPresenterFactory.createInterstitalPresenter(with: ad, withVideoSkipOffset: self.videoSkipOffset, withHTMLSkipOffset: UInt(htmlSkipOffset), withCloseOnFinish: self.closeOnFinish, with: HyBidInterstitialPresenterWrapper(parent: self))
         } else if videoSkipOffset < 0 && htmlSkipOffset < 0 {
             let isEndCardOrCustomEndCard = self.ad?.hasEndCard ?? false || self.ad?.hasCustomEndCard ?? false
             let offsetValue = isEndCardOrCustomEndCard && HyBidConstants.showEndCard
@@ -359,6 +359,12 @@ public class HyBidInterstitialAd: NSObject {
     }
     
     func invokeDidFailWithError(error: Error) {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.invokeDidFailWithError(error: error)
+            }
+            return
+        }
         if HyBidSDKConfig.sharedConfig.reporting {
             if let initialLoadTimestamp = self.initialLoadTimestamp, initialLoadTimestamp != -1 {
                 self.loadReportingProperties[Common.TIME_TO_LOAD] = String(format: "%f", elapsedTimeSince(initialLoadTimestamp))
@@ -417,8 +423,6 @@ public class HyBidInterstitialAd: NSObject {
             if let skipOffset = ad.pcInterstitialHtmlSkipOffset {
                 if skipOffset.intValue < 0 {
                     self.htmlSkipOffset = HyBidSkipOffset(offset: NSNumber(value: HyBidSkipOffset.DEFAULT_PC_INTERSTITIAL_SKIP_OFFSET), isCustom: true)
-                } else if skipOffset.intValue >= HyBidSkipOffset.DEFAULT_PC_INTERSTITIAL_MAX_SKIP_OFFSET {
-                    self.htmlSkipOffset = HyBidSkipOffset(offset: NSNumber(value: HyBidSkipOffset.DEFAULT_PC_INTERSTITIAL_MAX_SKIP_OFFSET), isCustom: true)
                 } else {
                     self.htmlSkipOffset = HyBidSkipOffset(offset: skipOffset, isCustom: true)
                 }
@@ -444,8 +448,6 @@ public class HyBidInterstitialAd: NSObject {
             }
             if skipOffset.intValue < 0 {
                 self.videoSkipOffset = HyBidSkipOffset(offset: NSNumber(value: defaultSkipOffset), isCustom: true)
-            } else if skipOffset.intValue >= HyBidSkipOffset.DEFAULT_INTERSTITIAL_VIDEO_MAX_SKIP_OFFSET {
-                self.videoSkipOffset = HyBidSkipOffset(offset: NSNumber(value: HyBidSkipOffset.DEFAULT_INTERSTITIAL_VIDEO_MAX_SKIP_OFFSET), isCustom: true)
             } else {
                 self.videoSkipOffset = HyBidSkipOffset(offset: skipOffset, isCustom: true)
             }
@@ -462,6 +464,11 @@ public class HyBidInterstitialAd: NSObject {
         if (ad.closeInterstitialAfterFinish != nil) {
             self.closeOnFinish = ad.closeInterstitialAfterFinish.boolValue;
         }
+    }
+    
+    @objc(setMediationWatermark:)
+    public func setMediationWatermark(_ pngData: Data?) {
+        self.mediationWatermarkData = pngData
     }
 }
 
@@ -483,9 +490,9 @@ extension HyBidInterstitialAd {
         
         if let ad = ad {
             self.ad = ad
-            self.adSessionData = ATOMManager.createAdSessionData(from: request, ad: ad)
             self.determineSkipOffsetValuesFor(ad)
             self.determineCloseOnFinishFor(ad)
+            self.ad?.mediationWatermarkData = self.mediationWatermarkData
             self.renderAd(ad: ad)
         } else {
             self.invokeDidFailWithError(error: NSError.hyBidNullAd())
@@ -549,7 +556,6 @@ extension HyBidInterstitialAd {
 extension HyBidInterstitialAd {
     func signalDataDidFinish(with ad: HyBidAd) {
         self.ad = ad
-        self.adSessionData = ATOMManager.createAdSessionData(from: nil, ad: ad)
         self.renderAd(ad: ad)
     }
     

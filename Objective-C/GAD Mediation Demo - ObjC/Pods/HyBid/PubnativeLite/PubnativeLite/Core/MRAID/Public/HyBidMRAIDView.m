@@ -5,6 +5,7 @@
 //
 
 #import "HyBidMRAIDView.h"
+#import "HyBidAd+Internal.h"
 #import "PNLiteMRAIDOrientationProperties.h"
 #import "PNLiteMRAIDResizeProperties.h"
 #import "PNLiteMRAIDParser.h"
@@ -12,7 +13,7 @@
 #import "HyBidMRAIDServiceDelegate.h"
 #import "PNLiteMRAIDUtil.h"
 #import "PNLiteMRAIDSettings.h"
-
+#import "HyBidStringUtils.h"
 #import "HyBidViewabilityWebAdSession.h"
 #import "HyBidNavigatorGeolocation.h"
 #import "HyBidCloseButton.h"
@@ -34,12 +35,14 @@
 #import "HyBidEndCardView.h"
 #import "HyBidStoreKitUtils.h"
 #import "HyBidCustomClickUtil.h"
+#import "HyBidAutomaticClickTrackingUtil.h"
 #import "HyBidURLDriller.h"
-#import "OMIDAdSessionWrapper.h"
+#import "HyBidOMIDAdSessionWrapper.h"
 
 #define SYSTEM_VERSION_LESS_THAN(v)  ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedAscending)
 
 #define HYBID_MRAID_CLOSE_BUTTON_TAG 1001
+#define kMRAIDCloseEventRegionSize 50
 
 CGFloat const kContentInfoViewHeight = 15.0f;
 CGFloat const kContentInfoViewWidth = 15.0f;
@@ -64,7 +67,7 @@ typedef enum {
     BOOL isScrollable;
     BOOL isExpanded;
 
-    OMIDAdSessionWrapper *adSession;
+    HyBidOMIDAdSessionWrapper *adSession;
     
     // The only property of the MRAID expandProperties we need to keep track of
     // on the native side is the useCustomClose property.
@@ -91,7 +94,7 @@ typedef enum {
     
     HyBidNavigatorGeolocation* navigatorGeolocation;
     
-    UIButton *closeButton;
+    HyBidCloseButton *closeButton;
 
     UIView *resizeView;
     UIButton *resizeCloseRegion;
@@ -105,7 +108,9 @@ typedef enum {
     UITapGestureRecognizer *tapGestureRecognizer;
     BOOL bonafideTapObserved; //supressing redirect from banners
     BOOL tapObserved; // observing taps on MRAID (specifically for taps on endcard)
+    BOOL hasBeenTouched; // user touched the creative since the click-through timer was armed; gates the synthetic click
     BOOL startedFromTap;
+    BOOL redirectorResolvedFromUserClick; // YES while re-entering open: with a URL the redirector resolved for a real tap
     
     NSString* urlFromMraidOpen;
 
@@ -150,6 +155,7 @@ typedef enum {
 // internal helper methods
 - (void)initWebView:(WKWebView *)wv;
 - (void)parseCommandUrl:(NSString *)commandUrlString prefixToRemove:(NSString *)prefixToRemove;
+- (NSString *)enforceInlineVideoPlaybackForBannerHtml:(NSString *)html;
 
 @property (nonatomic, strong) NSTimer *closeButtonOffsetTimer;
 @property (nonatomic, assign) NSTimeInterval closeButtonTimeElapsed;
@@ -172,8 +178,17 @@ typedef enum {
 @property (nonatomic, strong) NSDate *storekitDelayTimerStartDate;
 @property (nonatomic, assign) BOOL isTimerPaused;
 @property (nonatomic, assign) BOOL isAutoStoreKit;
+@property (nonatomic, strong) NSTimer *clickThroughTimer;
+@property (nonatomic, assign) NSTimeInterval clickThroughTimerDelay;
+@property (nonatomic, assign) NSTimeInterval clickThroughTimerElapsed;
+@property (nonatomic, strong) NSDate *clickThroughTimerStartDate;
+@property (nonatomic, assign) BOOL isClickThroughTimerPaused;
+@property (nonatomic, assign) BOOL clickThroughDestinationOpened;
+@property (nonatomic, strong) UITapGestureRecognizer *clickThroughTouchRecognizer;
+@property (nonatomic, strong) NSURL *syntheticClickURL;
 @property (nonatomic, strong) HyBidVASTEventProcessor *vastEventProcessor;
 @property (nonatomic, assign) BOOL shouldHandleInterruptions;
+@property (nonatomic, strong) UIView *watermarkView;
 
 @end
 
@@ -258,6 +273,12 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         isScrollable = canScroll;
         adWidth = frame.size.width;
         adHeight = frame.size.height;
+
+        // Prevent CSS transform overflow for banner ads.
+        // Clipping the view to its bounds closes that escape hatch for non-interstitial ads.
+        if (!isInter) {
+            self.clipsToBounds = YES;
+        }
         _delegate = delegate;
         _serviceDelegate = serviceDelegate;
         _rootViewController = rootViewController;
@@ -266,6 +287,7 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         _isViewable = NO;
         useCustomClose = NO;
         tapObserved = NO;
+        hasBeenTouched = NO;
         _skipOffset = skipOffset;
         isExpanded = NO;
 
@@ -305,6 +327,10 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         
         [self setWebViewConstraintsInRelationWithView:self];
         
+        if (!isEndcard) {
+            [self addMediationWatermarkView:self];
+        }
+        
         previousMaxSize = CGSizeZero;
         previousScreenSize = CGSizeZero;
         
@@ -319,6 +345,7 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
             [self htmlFromUrl:baseURL handler:^(NSString *html, NSError *error) {
                 if(html && !error){
                     htmlData = [PNLiteMRAIDUtil processRawHtml:html];
+                    htmlData = [self enforceInlineVideoPlaybackForBannerHtml:htmlData];
                     [self loadHTMLDataWithBaseURL:htmlData];
                 } else {
                     [HyBidLogger errorLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:error.localizedDescription];
@@ -332,6 +359,7 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
             }];
         } else {
             htmlData = [PNLiteMRAIDUtil processRawHtml:htmlData];
+            htmlData = [self enforceInlineVideoPlaybackForBannerHtml:htmlData];
             [self loadHTMLData:htmlData];
         }
         
@@ -340,9 +368,6 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         }
         
         buttonSize = [HyBidCloseButton buttonDefaultSize];
-        if (self.shouldHandleInterruptions) {
-            [[HyBidInterruptionHandler shared] setDelegate:self for:HyBidAdContextMraidView];
-        }
         
         self.landingpageBehaviour = HyBidLandingBehaviourTypeCountdown;
         self.landingpageCloseDelay = landingPageSecondsToCloseAdDelay;
@@ -482,23 +507,56 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
 
 - (void)cancel {
     [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:@"cancel"];
-    [currentWebView stopLoading];
-    currentWebView = nil;
+    [self stopClickThroughTimer];
+    [self removeClickThroughTouchObserver];
+
+    // Clean up webView to prevent callbacks to deallocated object
+    if (currentWebView) {
+        [currentWebView stopLoading];
+        currentWebView.navigationDelegate = nil;
+        currentWebView.UIDelegate = nil;
+        currentWebView = nil;
+    }
+    
     [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
 }
 
 - (void)dealloc {
     [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:[NSString stringWithFormat: @"%@ %@", [self.class description], NSStringFromSelector(_cmd)]];
+    [self stopClickThroughTimer];
+    [self removeClickThroughTouchObserver];
+
+    // Clean up WKWebView delegates before deallocation to prevent bmalloc crash
+    if (webView) {
+        [webView stopLoading];
+        webView.navigationDelegate = nil;
+        webView.UIDelegate = nil;
+        webView = nil;
+    }
     
-    [self removeObserver:self forKeyPath:@"frame"];
+    if (webViewPart2) {
+        [webViewPart2 stopLoading];
+        webViewPart2.navigationDelegate = nil;
+        webViewPart2.UIDelegate = nil;
+        webViewPart2 = nil;
+    }
+    
+    if (currentWebView && currentWebView != webView && currentWebView != webViewPart2) {
+        [currentWebView stopLoading];
+        currentWebView.navigationDelegate = nil;
+        currentWebView.UIDelegate = nil;
+    }
+    currentWebView = nil;
+    
+    @try {
+        [self removeObserver:self forKeyPath:@"frame"];
+    } @catch (NSException *exception) {
+        [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:[NSString stringWithFormat:@"Exception removing observer: %@", exception]];
+    }
+    
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
     
-    [[HyBidInterruptionHandler shared] deactivateContext:HyBidAdContextMraidView];
-
-    webView = nil;
-    webViewPart2 = nil;
-    currentWebView = nil;
     navigatorGeolocation = nil;
     
     mraidParser = nil;
@@ -533,6 +591,8 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
     self.storekitDelayTimeElapsed = 0;
     self.storekitDelayTimerStartDate = nil;
     self.vastEventProcessor = nil;
+    [self removeView:self.watermarkView];
+    self.watermarkView = nil;
 }
 
 - (BOOL)isValidFeatureSet:(NSArray *)features {
@@ -648,6 +708,7 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
 
 - (void)skipButtonTapped
 {
+    [self stopClickThroughTimer];
     if ([self isValidToCreateCustomEndCardForAd:self.ad]) {
         [self showCustomEndCard];
     } else {
@@ -660,7 +721,7 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
 {
     isSkipTimerCompleted = YES;
     buttonSize = [HyBidCloseButton buttonSizeBasedOn:self.ad];
-    if(isInterstitial && self.countdownStyle == HyBidCountdownPieChart){
+    if(isInterstitial && self.countdownStyle == HyBidCountdownSimple){
         if (hideCountdownForLandingPage && [self.skipOverlay isHidden]) { [self.skipOverlay setHidden:NO]; }
         if([modalVC.view.subviews containsObject:self.skipOverlay]){
             [self setCloseButtonPosition: self.skipOverlay];
@@ -761,11 +822,15 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
 
 - (void)close {
     [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:[NSString stringWithFormat: @"JS callback %@", NSStringFromSelector(_cmd)]];
+    [self stopClickThroughTimer];
     
+    if (self.shouldHandleInterruptions && !modalVC) {
+        [[HyBidInterruptionHandler shared] deactivateContext:HyBidAdContextMraidView];
+    }
+
     if (state == PNLiteMRAIDStateLoading ||
         (state == PNLiteMRAIDStateDefault && !isInterstitial) ||
         state == PNLiteMRAIDStateHidden) {
-        // do nothing
         return;
     }
     
@@ -786,15 +851,21 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
     if (modalVC) {
         [self removeView: closeButton];
         [currentWebView removeFromSuperview];
+        __weak typeof(self) weakSelf = self;
         if ([modalVC respondsToSelector:@selector(dismissViewControllerAnimated:completion:)]) {
-            // used if running >= iOS 6
-            [modalVC dismissViewControllerAnimated:NO completion:nil];
+            [modalVC dismissViewControllerAnimated:NO completion:^{
+                if (weakSelf.shouldHandleInterruptions) {
+                    [[HyBidInterruptionHandler shared] deactivateContext:HyBidAdContextMraidView];
+                }
+            }];
         } else {
-            // Turn off the warning about using a deprecated method.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             [modalVC dismissModalViewControllerAnimated:NO];
 #pragma clang diagnostic pop
+            if (self.shouldHandleInterruptions) {
+                [[HyBidInterruptionHandler shared] deactivateContext:HyBidAdContextMraidView];
+            }
         }
     }
     
@@ -879,6 +950,23 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
     }
 }
 
++ (NSString *)resolvedExpandURLString:(NSString *)urlString withBaseURL:(NSURL *)expandBaseURL {
+    NSString *decodedURLString = [urlString stringByRemovingPercentEncoding];
+    if (decodedURLString) {
+        urlString = decodedURLString;
+    }
+    if (urlString && ![[NSURL URLWithString:urlString] scheme]) {
+        NSString *baseURLString = [expandBaseURL absoluteString];
+        NSString *decodedBaseURLString = [baseURLString stringByRemovingPercentEncoding] ?: baseURLString;
+        if (decodedBaseURLString) {
+            urlString = [decodedBaseURLString stringByAppendingString:urlString];
+        }
+    }
+
+    NSString *encodedURLString = [urlString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLFragmentAllowedCharacterSet]];
+    return encodedURLString ?: urlString;
+}
+
 - (void)expandCreative:(NSString *)urlString supportVerve:(BOOL)supportVerve {
     UIInterfaceOrientation currentOrientation = [[UIApplication sharedApplication] statusBarOrientation];
     
@@ -935,14 +1023,7 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         // Check to see whether we've been given an absolute or relative URL.
         // If it's relative, prepend the base URL.
         if (!supportVerve) {
-            urlString = [urlString stringByRemovingPercentEncoding];
-            if (![[NSURL URLWithString:urlString] scheme]) {
-                // relative URL
-                urlString = [[[baseURL absoluteString] stringByRemovingPercentEncoding] stringByAppendingString:urlString];
-            }
-
-            // Need to escape characters which are URL specific
-            urlString = [urlString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLFragmentAllowedCharacterSet]];
+            urlString = [HyBidMRAIDView resolvedExpandURLString:urlString withBaseURL:baseURL];
         }
 
         NSError *error;
@@ -994,6 +1075,8 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
 #pragma clang diagnostic pop
     }
     
+    [self addMediationWatermarkView:modalVC.view];
+    
     if (!isInterstitial) {
         [self addContentInfoViewToView:modalVC.view];
         state = PNLiteMRAIDStateExpanded;
@@ -1005,8 +1088,8 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         [self determineUseCustomCloseBehaviourWith:self.nativeCloseButtonDelay showSkipOverlay:YES];
     }
     
-    if (self.shouldHandleInterruptions && ![[[HyBidInterruptionHandler shared] activeDelegate] isMemberOfClass:[HyBidMRAIDView class]]) {
-        [[HyBidInterruptionHandler shared] activateContext:HyBidAdContextMraidView];
+    if (self.shouldHandleInterruptions) {
+        [[HyBidInterruptionHandler shared] activateContext:HyBidAdContextMraidView with:self];
     }
     
     if(state == PNLiteMRAIDStateExpanded){
@@ -1017,16 +1100,18 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
     self.isViewable = YES;
     
     [self setAutoStoreKitViewTimer];
+    [self setClickThroughTimer];
 }
 
 - (void)addSkipOverlay
 {
     if (modalVC && modalVC.view ) {
         self.skipOverlay = [[HyBidSkipOverlay alloc] initWithSkipOffset:self->_skipOffset
-                                                     withCountdownStyle:HyBidCountdownPieChart
+                                                     withCountdownStyle:HyBidCountdownSimple
                                          withContentInfoPositionTopLeft:[self isContentInfoInTopLeftPosition]
                                                withShouldShowSkipButton:[self isValidToCreateCustomEndCardForAd:self.ad] ? YES : NO
                                                                      ad:self.ad];
+        self.skipOverlay.touchSize = [self closeEventRegionTouchSize];
         [self.skipOverlay addSkipOverlayViewIn:modalVC.view delegate:self];
         if (hideCountdownForLandingPage) { [self.skipOverlay setHidden:YES]; }
     }
@@ -1054,7 +1139,18 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
 }
 
 - (void)openBrowserForUserClick:(NSString *)urlString {
-    [self openBrowserWithURLString:urlString];
+    if (![self openBrowserWithURLString:urlString]) {
+        return;
+    }
+    [self clickThroughDestinationDidOpen];
+}
+
+- (void)notifyDelegateToNavigateToURL:(NSURL *)url {
+    if (![self.delegate respondsToSelector:@selector(mraidViewNavigate:withURL:)]) {
+        return;
+    }
+    [self clickThroughDestinationDidOpen];
+    [self.delegate mraidViewNavigate:self withURL:url];
 }
 
 - (void)open:(NSString *)urlString {
@@ -1062,8 +1158,19 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         [HyBidLogger infoLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:@"Suppressing an attempt to programmatically call mraid.open() when no UI touch event exists."];
         return;  // ignore programmatic touches (taps)
     }
-    
-    urlString = [urlString stringByRemovingPercentEncoding];
+
+    if (urlString == nil) {
+        [HyBidLogger infoLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:@"Ignoring an mraid.open() with a nil URL."];
+        startedFromTap = NO;
+        return;
+    }
+    urlString = [urlString stringByRemovingPercentEncoding] ?: urlString;
+
+    if ([self shouldSuppressNavigationToURL:[NSURL URLWithString:urlString]]) {
+        [HyBidLogger infoLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:@"Suppressing navigation already handled by the click-through timer."];
+        startedFromTap = NO;
+        return;
+    }
 
     if (!isEndcard) {
         urlFromMraidOpen = urlString;
@@ -1079,9 +1186,12 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
     // Avoid opening multiple Store ViewControllers
     if ([HyBidSKAdNetworkViewController.shared isSKProductViewControllerPresented]) {
         [HyBidLogger infoLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:@"Suppressing an attempt to manual/auto click when task is not finished yet"];
+        startedFromTap = NO;
         return;
     }
-    
+
+    // Deliberately keeps startedFromTap set: the redirector re-enters open: with the
+    // resolved URL, and that second pass still needs to pass the auto-storekit gate above.
     if(tapObserved) {
         HyBidURLRedirector *redirector = [[HyBidURLRedirector alloc] init];
         redirector.delegate = self;
@@ -1089,6 +1199,7 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         if (self.ad && [self.ad getSkAdNetworkModel]) {
             skanModel = [self.ad getSkAdNetworkModel];
         }
+        [self clickThroughDestinationDidOpen];
         [redirector drillWithUrl:urlString skanModel:skanModel];
         
         // Report Endcard click (DEFAULT_ENDCARD_CLICK)
@@ -1106,19 +1217,29 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
 
     if([urlString containsString:@"sms"]){
         if ([self.serviceDelegate respondsToSelector:@selector(mraidServiceSendSMSWithUrlString:)]) {
+            [self clickThroughDestinationDidOpen];
             [self.serviceDelegate mraidServiceSendSMSWithUrlString:urlString];
         }
     } else if ([urlString containsString:@"tel"]) {
         if ([self.serviceDelegate respondsToSelector:@selector(mraidServiceCallNumberWithUrlString:)]) {
+            [self clickThroughDestinationDidOpen];
             [self.serviceDelegate mraidServiceCallNumberWithUrlString:urlString];
         }
     } else if ([[urlString lowercaseString] containsString:@"apps.apple.com"]) {
         [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:[NSString stringWithFormat: @"Trying to present StoreViewController with url: %@", urlString]];
-        [self openAppStoreWithAppID:urlString];
-    } else if (tapObserved) {
+        if ([self openAppStoreWithAppID:urlString]) {
+            [self clickThroughDestinationDidOpen];
+        }
+    } else if (tapObserved || redirectorResolvedFromUserClick) {
         [self openBrowserForUserClick:urlString];
     }
     startedFromTap = NO;
+}
+
+- (void)clickThroughDestinationDidOpen {
+    self.clickThroughDestinationOpened = YES;
+    [self stopClickThroughTimer];
+    [self removeClickThroughTouchObserver];
 }
 
 - (void)playVideo:(NSString *)urlString {
@@ -1191,6 +1312,7 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
         resizeView = [[UIView alloc] initWithFrame:resizeFrame];
         [webView removeFromSuperview];
         [resizeView addSubview:webView];
+        [self addMediationWatermarkView:resizeView];
         [self addContentInfoViewToView:webView];
         [self.rootViewController.view addSubview:resizeView];
     }
@@ -1459,8 +1581,13 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
     
     if(modalVC.view){
         closeButton = [[HyBidCloseButton alloc] initWithRootView:modalVC.view action:@selector(close) target:self ad:self.ad];
+        closeButton.touchSize = [self closeEventRegionTouchSize];
         [closeButton setTag:HYBID_MRAID_CLOSE_BUTTON_TAG];
     }
+}
+
+- (NSNumber *)closeEventRegionTouchSize {
+    return isInterstitial ? nil : @(kMRAIDCloseEventRegionSize);
 }
 
 - (BOOL)isContentInfoInTopLeftPosition {
@@ -1664,19 +1791,26 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
     }
 }
 
-- (BOOL)isValidToCreateCustomEndCardForAd:(HyBidAd *)ad {
-    BOOL hasValidClickThrough = ((self.clickThrough != nil) || [self hasValidSkanObject]);
+// Configuration-only check: the end card may still not present if no click-through/SKAN
+// object ever arrives (see isValidToCreateCustomEndCardForAd:). The click-through timer
+// deliberately arms on this weaker predicate because clickThrough can be delivered late
+// via setRedirectionUrl:, after expandCreative: has already run.
+- (BOOL)isCustomEndCardConfiguredForAd:(HyBidAd *)ad {
     if (!isInterstitial ||
         ad.customEndcardEnabled == nil ||
         ad.customEndcardEnabled.boolValue != YES ||
         ad.customEndCardData == nil ||
         ad.customEndCardData.length == 0 ||
-        !hasValidClickThrough ||
         ad.landingPage == YES ||
         landingPageFlowActive == YES) {
         return NO;
     }
     return YES;
+}
+
+- (BOOL)isValidToCreateCustomEndCardForAd:(HyBidAd *)ad {
+    BOOL hasValidClickThrough = ((self.clickThrough != nil) || [self hasValidSkanObject]);
+    return [self isCustomEndCardConfiguredForAd:ad] && hasValidClickThrough;
 }
 
 #pragma mark - native -->  JavaScript support
@@ -1843,12 +1977,12 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
     if ([HyBidLocationConfig sharedConfig].locationTrackingEnabled) {
         CLLocation* location = [HyBidSettings sharedInstance].location;
         if (location) {
-            NSString* formattedLatitude = [[NSString alloc] initWithFormat:@"%.2f", location.coordinate.latitude];
-            NSString* formattedLongitude = [[NSString alloc] initWithFormat:@"%.2f", location.coordinate.longitude];
+            double roundedLatitude = [HyBidLocationHelper roundedCoordinate:location.coordinate.latitude];
+            double roundedLongitude = [HyBidLocationHelper roundedCoordinate:location.coordinate.longitude];
             
             NSArray *objects = [[NSArray alloc] initWithObjects:
-                                [NSNumber numberWithDouble:[formattedLatitude floatValue]],
-                                [NSNumber numberWithDouble:[formattedLongitude floatValue]],
+                                [NSNumber numberWithDouble:roundedLatitude],
+                                [NSNumber numberWithDouble:roundedLongitude],
                                 [NSNumber numberWithInt:1],
                                 [NSNumber numberWithDouble:[location horizontalAccuracy]],
                                 [NSNumber numberWithDouble:[[NSDate date] timeIntervalSinceDate:location.timestamp]], nil];
@@ -1940,6 +2074,30 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
 
 - (void)webView:(WKWebView *)webView didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error {
     [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:[NSString stringWithFormat: @"JS callback %@", NSStringFromSelector(_cmd)]];
+    [self handleLoadingNavigationFailureWithError:error];
+}
+
+- (void)webView:(WKWebView *)webView didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error {
+    [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:[NSString stringWithFormat: @"JS callback %@ %@", NSStringFromSelector(_cmd), error.localizedDescription]];
+    [self handleLoadingNavigationFailureWithError:error];
+}
+
+// A navigation that fails before the ad became ready would otherwise leave the delegate with neither ready nor failed.
+- (void)handleLoadingNavigationFailureWithError:(NSError *)error {
+    if (state != PNLiteMRAIDStateLoading) {
+        return;
+    }
+    // Navigations cancelled by decidePolicyForNavigationAction (mraid:// commands, redirects) are not load failures.
+    BOOL isCancelled = [error.domain isEqualToString:NSURLErrorDomain] && error.code == NSURLErrorCancelled;
+    BOOL isPolicyInterruption = [error.domain isEqualToString:@"WebKitErrorDomain"] && error.code == 102;
+    if (isCancelled || isPolicyInterruption) {
+        return;
+    }
+    if (isEndcard && [self.delegate respondsToSelector:@selector(mraidViewAdFailed:withError:)]) {
+        [self.delegate mraidViewAdFailed:self withError:error];
+    } else if ([self.delegate respondsToSelector:@selector(mraidViewAdFailed:)]) {
+        [self.delegate mraidViewAdFailed:self];
+    }
 }
 
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
@@ -2018,7 +2176,11 @@ shouldHandleInterruptions:(BOOL)shouldHandleInterruptions {
                                 decisionHandler(WKNavigationActionPolicyAllow);
                                 return;
                             } else {
-                                [self.delegate mraidViewNavigate:self withURL:url];
+                                if ([self shouldSuppressNavigationToURL:url]) {
+                                    decisionHandler(WKNavigationActionPolicyCancel);
+                                    return;
+                                }
+                                [self notifyDelegateToNavigateToURL:url];
                                 decisionHandler(WKNavigationActionPolicyCancel);
                                 return;
                             }
@@ -2073,11 +2235,14 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
         windowFeatures:(WKWindowFeatures *)windowFeatures {
     // Open any links to new windows in the current WKWebView rather than create a new one
     if (!navigationAction.targetFrame.isMainFrame) {
+        if ([self shouldSuppressNavigationToURL:[navigationAction.request URL]]) {
+            return nil;
+        }
         [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
         if ([self.delegate respondsToSelector:@selector(mraidViewNavigate:withURL:)]) {
             [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:[NSString stringWithFormat:@"JS webview load: %@",
                                                                                                                               [[[navigationAction.request URL] absoluteString] stringByRemovingPercentEncoding]]];
-            [self.delegate mraidViewNavigate:self withURL:[navigationAction.request URL]];
+            [self notifyDelegateToNavigateToURL:[navigationAction.request URL]];
         }
     }
     
@@ -2099,6 +2264,19 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
     return (skanModel.productParameters[HyBidSKAdNetworkParameter.itunesitem] != nil && [skanModel.productParameters[HyBidSKAdNetworkParameter.itunesitem] isKindOfClass:[NSString class]]);
 }
 
+// Keeps banner videos playing inline instead of taking over the screen in the native player.
+// Adds `playsinline` to any <video> already in the markup. Videos added later by JS are handled
+// in createConfiguration. The lookahead skips tags that already have it.
+- (NSString *)enforceInlineVideoPlaybackForBannerHtml:(NSString *)html {
+    if (isInterstitial || html == nil) {
+        return html;
+    }
+    return [HyBidStringUtils safeRegexReplaceInValue:html
+                                             pattern:@"<video(?![^>]*\\splaysinline)(\\s|>|/)"
+                                        withTemplate:@"<video playsinline$1"
+                                             options:NSRegularExpressionCaseInsensitive];
+}
+
 - (WKWebViewConfiguration *)createConfiguration {
     WKUserContentController *wkUController = [[WKUserContentController alloc] init];
     WKWebViewConfiguration *webConfiguration = [[WKWebViewConfiguration alloc] init];
@@ -2107,19 +2285,58 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
     if ([supportedFeatures containsObject:PNLiteMRAIDSupportsInlineVideo]) {
         webConfiguration.allowsInlineMediaPlayback = YES;
         webConfiguration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeNone;
+
+        // For banner ads only: without `playsinline` on a <video> element, iOS launches
+        // the native AVKit fullscreen player when autoplay fires, regardless of
+        // allowsInlineMediaPlayback = YES. Injected at AtDocumentStart so the
+        // MutationObserver is in place before any page script (e.g. Video.js) runs
+        // and creates <video> elements. forMainFrameOnly:NO covers nested iframes.
+        if (!isInterstitial) {
+            NSString *playsinlineJS =
+                @"(function() {"
+                @"  function enforcePlaysinline(node) {"
+                @"    if (node.nodeName === 'VIDEO') {"
+                @"      node.setAttribute('playsinline', '');"
+                @"      node.setAttribute('webkit-playsinline', '');"
+                @"    }"
+                @"  }"
+                @"  document.querySelectorAll('video').forEach(enforcePlaysinline);"
+                @"  new MutationObserver(function(mutations) {"
+                @"    mutations.forEach(function(m) {"
+                @"      m.addedNodes.forEach(function(n) {"
+                @"        if (n.nodeType === 1) {"
+                @"          enforcePlaysinline(n);"
+                @"          n.querySelectorAll && n.querySelectorAll('video').forEach(enforcePlaysinline);"
+                @"        }"
+                @"      });"
+                @"    });"
+                @"  }).observe(document.documentElement, { childList: true, subtree: true });"
+                @"})();";
+            WKUserScript *playsinlineScript = [[WKUserScript alloc]
+                initWithSource:playsinlineJS
+                 injectionTime:WKUserScriptInjectionTimeAtDocumentStart
+              forMainFrameOnly:NO];
+            [wkUController addUserScript:playsinlineScript];
+        }
     } else {
         webConfiguration.allowsInlineMediaPlayback = NO;
         webConfiguration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeAll;
         [HyBidLogger warningLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:[NSString stringWithFormat:@"No inline video support has been included, videos will play full screen without autoplay."]];
     }
-    
+
     return webConfiguration;
 }
+
 
 - (void)initWebView:(WKWebView *)wv {
     wv.navigationDelegate = self;
     wv.UIDelegate = self;
     wv.opaque = NO;
+
+    // For banner ads, clip the webview so that CSS-transformed content cannot visually overflow the declared ad bounds.
+    if (!isInterstitial) {
+        wv.clipsToBounds = YES;
+    }
     
 #if DEBUG
     if (@available(iOS 16.4, *)) {
@@ -2196,9 +2413,75 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
     return YES;
 }
 
+- (void)observeClickThroughTouchesOnWebView {
+    if (self.clickThroughTouchRecognizer != nil && self.clickThroughTouchRecognizer.view == currentWebView) {
+        return;
+    }
+    [self removeClickThroughTouchObserver];
+    if (currentWebView == nil) {
+        return;
+    }
+    UITapGestureRecognizer *recognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(clickThroughTouchObserved)];
+    [recognizer setNumberOfTapsRequired:1];
+    [recognizer setNumberOfTouchesRequired:1];
+    // Purely an observer: it must never swallow or delay the creative's own touch handling.
+    recognizer.cancelsTouchesInView = NO;
+    recognizer.delaysTouchesBegan = NO;
+    recognizer.delaysTouchesEnded = NO;
+    [recognizer setDelegate:self];
+    [currentWebView addGestureRecognizer:recognizer];
+    self.clickThroughTouchRecognizer = recognizer;
+}
+
+- (void)removeClickThroughTouchObserver {
+    if (self.clickThroughTouchRecognizer == nil) {
+        return;
+    }
+    [self.clickThroughTouchRecognizer.view removeGestureRecognizer:self.clickThroughTouchRecognizer];
+    self.clickThroughTouchRecognizer = nil;
+}
+
++ (NSString *)normalizedDestinationForURL:(NSURL *)url {
+    NSString *absolute = url.absoluteString;
+    if (absolute == nil) {
+        return nil;
+    }
+    return [absolute stringByRemovingPercentEncoding] ?: absolute;
+}
+
+- (BOOL)shouldSuppressNavigationToURL:(NSURL *)url {
+    if (self.syntheticClickURL == nil) {
+        return NO;
+    }
+
+    if (url == nil) {
+        return NO;
+    }
+    NSString *candidate = [HyBidMRAIDView normalizedDestinationForURL:url];
+    NSString *expected = [HyBidMRAIDView normalizedDestinationForURL:self.syntheticClickURL];
+    if (candidate == nil || expected == nil || ![candidate isEqualToString:expected]) {
+        return NO;
+    }
+    [self clearSyntheticClickSuppression];
+    return YES;
+}
+
+- (void)clearSyntheticClickSuppression {
+    self.syntheticClickURL = nil;
+}
+
+- (void)clickThroughTouchObserved {
+    hasBeenTouched = YES;
+    // A fresh touch means the user is deliberately acting: never let a pending guard eat it.
+    [self clearSyntheticClickSuppression];
+    [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:@"click-through timer observed a touch on the creative"];
+}
+
 - (void)oneFingerOneTap {
+    [self clearSyntheticClickSuppression];
     bonafideTapObserved = YES;
     tapObserved = YES;
+    hasBeenTouched = YES;
     startedFromTap = YES;
     [HyBidLogger debugLogFromClass:NSStringFromClass([self class]) fromMethod:NSStringFromSelector(_cmd) withMessage:@"tapGesture oneFingerTap observed"];
 }
@@ -2220,15 +2503,17 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
     }
 }
 
-- (void)openAppStoreWithAppID:(NSString *)urlString {
+// Returns whether a destination was actually opened, so the caller does not retire the
+// click-through fallback timer on a path that bailed out without opening anything.
+- (BOOL)openAppStoreWithAppID:(NSString *)urlString {
     if ([HyBidSKAdNetworkViewController.shared isSKProductViewControllerPresented]) {
-        return; // Return early if the Store VC is already being presented
+        return NO; // Return early if the Store VC is already being presented
     }
     if ([self.ad.sdkAutoStorekitEnabled boolValue]){
         [self doTrackingEndcardWithUrlString:urlString];
-        return;
+        return NO;
     }
-    
+
     NSString* appID = [self extractAppIDFromAppStoreURL:urlString];
     if (appID) {
         NSDictionary *parameters = @{SKStoreProductParameterITunesItemIdentifier: appID};
@@ -2236,8 +2521,9 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
         [HyBidSKAdNetworkViewController.shared presentStoreKitViewWithProductParameters:parameters adFormat:isInterstitial ? HyBidReportingAdFormat.FULLSCREEN : HyBidReportingAdFormat.BANNER isAutoStoreKitView:self.isAutoStoreKit ad:self.ad];
         self.urlStringForEndCardTracking = urlString;
     } else {
-        [self openBrowserWithURLString:urlString];
+        return [self openBrowserWithURLString:urlString];
     }
+    return YES;
 }
 
 - (NSString *)extractAppIDFromAppStoreURL:(NSString *)urlString {
@@ -2275,6 +2561,98 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
     });
     self.storekitDelayTimerStartDate = [NSDate date];
     self.storekitDelayTimeElapsed = 0.0;
+}
+
+- (BOOL)isAutoClickSuppressed {
+    return [HyBidAutomaticClickTrackingUtil isAutoClickSuppressedForAd:self.ad];
+}
+
+- (void)scheduleClickThroughTimerWithDelay:(NSTimeInterval)delay {
+    void (^scheduleTimer)(void) = ^{
+        __weak typeof(self) weakSelf = self;
+        self.clickThroughTimer = [NSTimer scheduledTimerWithTimeInterval:delay repeats:NO block:^(NSTimer *timer) {
+            [weakSelf triggerClickThrough];
+        }];
+        self.clickThroughTimerStartDate = [NSDate date];
+    };
+    if ([NSThread isMainThread]) {
+        scheduleTimer();
+    } else {
+        dispatch_async(dispatch_get_main_queue(), scheduleTimer);
+    }
+}
+
+- (void)setClickThroughTimer {
+    if (self.clickThroughDestinationOpened) {
+        return;
+    }
+
+    [self stopClickThroughTimer];
+    [self removeClickThroughTouchObserver];
+    [self clearSyntheticClickSuppression];
+
+    if (![self isCustomEndCardConfiguredForAd:self.ad]) {
+        return;
+    }
+    NSNumber *delay = self.ad.clickThroughTimer;
+    if (!delay || [self isAutoClickSuppressed]) {
+        return;
+    }
+
+    hasBeenTouched = NO;
+    self.clickThroughTimerDelay = delay.doubleValue;
+    self.clickThroughTimerElapsed = 0;
+    [self observeClickThroughTouchesOnWebView];
+    [self scheduleClickThroughTimerWithDelay:self.clickThroughTimerDelay];
+}
+
+- (void)resumeClickThroughTimer {
+    if (!self.isClickThroughTimerPaused || self.clickThroughDestinationOpened || [self isAutoClickSuppressed]) {
+        return;
+    }
+    NSTimeInterval remaining = self.clickThroughTimerDelay - self.clickThroughTimerElapsed;
+    if (remaining > 0) {
+        [self scheduleClickThroughTimerWithDelay:remaining];
+    } else {
+        [self triggerClickThrough];
+    }
+    self.isClickThroughTimerPaused = NO;
+}
+
+- (void)pauseClickThroughTimer {
+    if (!self.clickThroughTimer.isValid || self.isClickThroughTimerPaused) {
+        return;
+    }
+    [self.clickThroughTimer invalidate];
+    self.clickThroughTimer = nil;
+    self.clickThroughTimerElapsed += [[NSDate date] timeIntervalSinceDate:self.clickThroughTimerStartDate];
+    self.isClickThroughTimerPaused = YES;
+}
+
+- (void)stopClickThroughTimer {
+    [self.clickThroughTimer invalidate];
+    self.clickThroughTimer = nil;
+    self.clickThroughTimerDelay = 0;
+    self.clickThroughTimerElapsed = 0;
+    self.clickThroughTimerStartDate = nil;
+    self.isClickThroughTimerPaused = NO;
+}
+
+- (void)triggerClickThrough {
+    BOOL shouldNavigate = hasBeenTouched && !self.clickThroughDestinationOpened && ![self isAutoClickSuppressed] && self.clickThrough != nil;
+    [self stopClickThroughTimer];
+    if (!shouldNavigate) {
+        return;
+    }
+
+    if (![self.delegate respondsToSelector:@selector(mraidViewNavigate:withURL:)]) {
+        return;
+    }
+    // Not clickThroughDestinationDidOpen: the touch observer must survive the synthetic
+    // click so a fresh user touch can still clear the suppression window armed below.
+    self.clickThroughDestinationOpened = YES;
+    self.syntheticClickURL = self.clickThrough;
+    [self.delegate mraidViewNavigate:self withURL:self.clickThrough];
 }
 
 - (void)resumeAutoStorekitViewTimer {
@@ -2333,6 +2711,8 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
 }
 
 - (void)trackClickForAutoStoreKitViewWith:(HyBidStorekitAutomaticClickType)clickType {
+    if ([HyBidAutomaticClickTrackingUtil isAutoClickSuppressedForAd:self.ad]) { return; }
+
     HyBidSkAdNetworkModel *skAdNetworkModel = self.ad.isUsingOpenRTB
     ? [self.ad getOpenRTBSkAdNetworkModel]
     : [self.ad getSkAdNetworkModel];
@@ -2353,6 +2733,8 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
 }
 
 - (void)trackClickForSKOverlayWithClickType:(HyBidSKOverlayAutomaticCLickType)clickType isFirstPresentation:(BOOL)isFirstPresentation {
+    if ([HyBidAutomaticClickTrackingUtil isAutoClickSuppressedForAd:self.ad]) { return; }
+
     HyBidSkAdNetworkModel *skAdNetworkModel = self.ad.isUsingOpenRTB
     ? [self.ad getOpenRTBSkAdNetworkModel]
     : [self.ad getSkAdNetworkModel];
@@ -2372,10 +2754,12 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
     }
 }
 
-- (void)openBrowserWithURLString:(NSString *)urlString {
-    if ([self.serviceDelegate respondsToSelector:@selector(mraidServiceOpenBrowserWithUrlString:)]) {
-        [self.serviceDelegate mraidServiceOpenBrowserWithUrlString:urlString];
+- (BOOL)openBrowserWithURLString:(NSString *)urlString {
+    if (![self.serviceDelegate respondsToSelector:@selector(mraidServiceOpenBrowserWithUrlString:)]) {
+        return NO;
     }
+    [self.serviceDelegate mraidServiceOpenBrowserWithUrlString:urlString];
+    return YES;
 }
 
 - (void)invokeDidClickForAutoStorekit:(HyBidStorekitAutomaticClickType)clickType {
@@ -2405,8 +2789,13 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
 }
 
 - (void)onURLRedirectorFinishWithUrl:(NSString * _Nonnull)url {
+    // tapObserved must be cleared before re-entering open:, otherwise we would drill the
+    // same URL again. Carry the user-click context over in a separate flag so the tail of
+    // open: still routes the resolved URL instead of silently dropping it.
     tapObserved = NO;
+    redirectorResolvedFromUserClick = YES;
     [self open:url];
+    redirectorResolvedFromUserClick = NO;
 }
 
 - (void)onURLRedirectorRedirectWithUrl:(NSString * _Nonnull)url {
@@ -2424,6 +2813,7 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
         [self playCountdownView];
         [self playCloseButtonDelay];
         [self resumeAutoStorekitViewTimer];
+        [self resumeClickThroughTimer];
     }
 }
 
@@ -2432,6 +2822,7 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
         [self pauseCountdownView];
         [self pauseCloseButtonDelay];
         [self pauseAutoStorekitViewTimer];
+        [self pauseClickThroughTimer];
     }
 }
 
@@ -2509,6 +2900,65 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
     if (!isInterstitial || [skAdNetworkModel.productParameters objectForKey:HyBidSKAdNetworkParameter.click] == [NSNull null] || ![[skAdNetworkModel.productParameters objectForKey:HyBidSKAdNetworkParameter.click] boolValue]) { return; }
     
     [self trackClickForSKOverlayWithClickType: HyBidSKOverlayAutomaticCLickVideo isFirstPresentation:isFirstPresentation];
+}
+
+#pragma mark - Watermark
+
+- (void)addMediationWatermarkView:(UIView *)view {
+    if (!view || !self.ad) {
+        return;
+    }
+    NSData *pngData = self.ad.mediationWatermarkData;
+    if (!pngData || pngData.length == 0) {
+        return;
+    }
+
+    UIImage *patternImage = [UIImage imageWithData:pngData
+                                             scale:[UIScreen mainScreen].scale];
+    if (!patternImage) return;
+
+    if (!self.watermarkView) {
+        UIView *overlay = [[UIView alloc] initWithFrame:CGRectZero];
+        overlay.userInteractionEnabled = NO;
+        self.watermarkView = overlay;
+    }
+    self.watermarkView.backgroundColor = [UIColor colorWithPatternImage:patternImage];
+
+    if (self.watermarkView.superview != view) {
+        [self.watermarkView removeFromSuperview];
+
+        if (currentWebView && currentWebView.superview == view) {
+            [view insertSubview:self.watermarkView aboveSubview:currentWebView];
+        } else {
+            [view addSubview:self.watermarkView];
+        }
+
+        self.watermarkView.translatesAutoresizingMaskIntoConstraints = NO;
+
+        if (@available(iOS 11.0, *)) {
+            UILayoutGuide *safe = view.safeAreaLayoutGuide;
+            [NSLayoutConstraint activateConstraints:@[
+                [self.watermarkView.topAnchor constraintEqualToAnchor:safe.topAnchor],
+                [self.watermarkView.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor],
+                [self.watermarkView.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor],
+                [self.watermarkView.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor]
+            ]];
+        } else {
+            [NSLayoutConstraint activateConstraints:@[
+                [self.watermarkView.topAnchor constraintEqualToAnchor:view.topAnchor],
+                [self.watermarkView.bottomAnchor constraintEqualToAnchor:view.bottomAnchor],
+                [self.watermarkView.leadingAnchor constraintEqualToAnchor:view.leadingAnchor],
+                [self.watermarkView.trailingAnchor constraintEqualToAnchor:view.trailingAnchor]
+            ]];
+        }
+
+        if (adSession) {
+            [[HyBidViewabilityWebAdSession sharedInstance] addFriendlyObstruction:self.watermarkView
+                                                                 toOMIDAdSession:adSession
+                                                                      withReason:@"This view is a non-interactive watermark overlay"
+                                                                  isInterstitial:isInterstitial];
+        }
+    }
 }
 
 @end

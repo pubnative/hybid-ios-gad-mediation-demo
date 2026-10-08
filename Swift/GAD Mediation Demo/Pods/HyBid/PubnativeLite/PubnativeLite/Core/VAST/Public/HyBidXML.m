@@ -146,6 +146,34 @@
 #pragma mark -
 #pragma mark Static Functions implementation
 
+// Walks a sibling chain (via ->nextSibling) returning the first element whose lowercased
+// name matches `aName`. Skips elements with a NULL name pointer and returns nil if the
+// name cannot be converted to a C string. Shared by +childElementNamed:parentElement:
+// and +nextSiblingNamed:searchFromElement: — those callers differ only in where the
+// chain starts.
+static HyBidXMLElement * HyBidXMLFindElementNamedInChain(HyBidXMLElement *startElement, NSString *aName) {
+	const char * name = [aName cStringUsingEncoding:NSUTF8StringEncoding];
+	if (!name) {
+		return nil;
+	}
+	size_t nameLen = strlen(name);
+	HyBidXMLElement *xmlElement = startElement;
+	while (xmlElement) {
+		if (!xmlElement->name) {
+			xmlElement = xmlElement->nextSibling;
+			continue;
+		}
+		for (int i = 0; xmlElement->name[i]; i++) {
+			xmlElement->name[i] = (char)tolower((unsigned char)xmlElement->name[i]);
+		}
+		if (strlen(xmlElement->name) == nameLen && memcmp(xmlElement->name, name, nameLen) == 0) {
+			return xmlElement;
+		}
+		xmlElement = xmlElement->nextSibling;
+	}
+	return nil;
+}
+
 @implementation HyBidXML (StaticFunctions)
 
 + (NSString*) elementName:(HyBidXMLElement*)aXMLElement {
@@ -169,15 +197,30 @@
 }
 
 + (NSString*) valueOfAttributeNamed:(NSString *)aName forElement:(HyBidXMLElement*)aXMLElement {
+	if (!aName) {
+		return nil;
+	}
+	if (!aXMLElement) {
+		return nil;
+	}
 	const char * name = [aName cStringUsingEncoding:NSUTF8StringEncoding];
+	if (!name) {
+		return nil;
+	}
 	NSString * value = nil;
     HyBidXMLAttribute * attribute = aXMLElement->firstAttribute;
     while (attribute) {
+        if (!attribute->name) {
+            attribute = attribute->next;
+            continue;
+        }
         for(int i = 0; attribute->name[i]; i++){
-            attribute->name[i] = tolower(attribute->name[i]);
+            attribute->name[i] = (char)tolower((unsigned char)attribute->name[i]);
         }
 		if (strlen(attribute->name) == strlen(name) && memcmp(attribute->name,name,strlen(name)) == 0) {
-			value = [NSString stringWithCString:&attribute->value[0] encoding:NSUTF8StringEncoding];
+			if (attribute->value) {
+				value = [NSString stringWithCString:&attribute->value[0] encoding:NSUTF8StringEncoding];
+			}
 			break;
 		}
 		attribute = attribute->next;
@@ -186,39 +229,17 @@
 }
 
 + (HyBidXMLElement*) childElementNamed:(NSString*)aName parentElement:(HyBidXMLElement*)aParentXMLElement{
-    if (!aParentXMLElement) {
-        return nil;
-    }
-	HyBidXMLElement * xmlElement = aParentXMLElement->firstChild;
-	const char * name = [aName cStringUsingEncoding:NSUTF8StringEncoding];
-    if (!name) {
-        return nil;
-    }
-	while (xmlElement) {
-        for(int i = 0; xmlElement->name[i]; i++){
-            xmlElement->name[i] = tolower(xmlElement->name[i]);
-        }
-		if (strlen(xmlElement->name) == strlen(name) && memcmp(xmlElement->name,name,strlen(name)) == 0) {
-			return xmlElement;
-		}
-		xmlElement = xmlElement->nextSibling;
+	if (!aParentXMLElement) {
+		return nil;
 	}
-	return nil;
+	return HyBidXMLFindElementNamedInChain(aParentXMLElement->firstChild, aName);
 }
 
 + (HyBidXMLElement*) nextSiblingNamed:(NSString*)aName searchFromElement:(HyBidXMLElement*)aXMLElement{
-	HyBidXMLElement * xmlElement = aXMLElement->nextSibling;
-	const char * name = [aName cStringUsingEncoding:NSUTF8StringEncoding];
-	while (xmlElement) {
-        for(int i = 0; xmlElement->name[i]; i++){
-            xmlElement->name[i] = tolower(xmlElement->name[i]);
-        }
-		if (strlen(xmlElement->name) == strlen(name) && memcmp(xmlElement->name,name,strlen(name)) == 0) {
-			return xmlElement;
-		}
-		xmlElement = xmlElement->nextSibling;
+	if (!aXMLElement) {
+		return nil;
 	}
-	return nil;
+	return HyBidXMLFindElementNamedInChain(aXMLElement->nextSibling, aName);
 }
 
 @end
@@ -285,14 +306,18 @@
 			// find start of next element skipping any cdata sections within text
 			char * elementEnd = CDATAEnd;
 			
-			// find next open tag
+			// find next open tag (may be NULL if no more tags after this CDATA)
 			elementEnd = strstr(elementEnd,"<");
-			// if open tag is a cdata section
-			while (strncmp(elementEnd,"<![CDATA[",9) == 0) {
+			// if open tag is a cdata section (guard: elementEnd must be non-NULL before strncmp)
+			while (elementEnd && strncmp(elementEnd,"<![CDATA[",9) == 0) {
 				// find end of cdata section
 				elementEnd = strstr(elementEnd,"]]>");
 				// find next open tag
 				elementEnd = strstr(elementEnd,"<");
+			}
+			// no "<" after CDATA: treat end of buffer as end of text (single CDATA to end of doc)
+			if (!elementEnd) {
+				elementEnd = bytes + bytesLength;
 			}
 			
 			// calculate length of cdata content

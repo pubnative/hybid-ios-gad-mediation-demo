@@ -21,7 +21,7 @@ typedef struct {
     char *signature;
     char *nonce;
     char *timestamp;
-} SKANObject;
+} SKANObject __attribute__((deprecated("Use HyBidSkAdNetworkModel productParameters instead.")));
 
 typedef enum {
     HyBidDemoAppPlacementBanner = 0,
@@ -55,10 +55,8 @@ typedef enum : NSUInteger {
 @property (nonatomic, readonly) NSString *bundleID;
 @property (nonatomic, readonly) NSString *adExperience;
 
-#if __has_include(<ATOM/ATOM-Swift.h>)
-@property (nonatomic, readonly) NSArray<NSString *> *cohorts;
-#endif
 @property (nonatomic, strong) HyBidEndCard *customEndCard;
+@property (nonatomic, strong) NSData *mediationWatermarkData;
 @property (nonatomic, readonly) NSNumber *assetGroupID;
 @property (nonatomic, readonly) NSNumber *openRTBAssetGroupID;
 @property (nonatomic, readonly) NSNumber *eCPM;
@@ -78,19 +76,26 @@ typedef enum : NSUInteger {
 @property (nonatomic, readonly) NSString *contentInfoDisplay;
 @property (nonatomic, readonly) NSString *contentInfoText;
 @property (nonatomic, readonly) NSString *adFormat;
+@property (nonatomic, readonly) NSDictionary *jsonData;
 
 //@property (nonatomic, readonly) NSString *contentInfoHorizontalPosition;
 //@property (nonatomic, readonly) NSString *contentInfoVeritcalPosition;
 @property (nonatomic, readonly) NSNumber *interstitialHtmlSkipOffset;
 @property (nonatomic, readonly) NSNumber *pcInterstitialHtmlSkipOffset;
 @property (nonatomic, readonly) NSNumber *videoSkipOffset;
+@property (nonatomic, readonly) NSString *videoSkipOffsetPercentage;
 @property (nonatomic, readonly) NSNumber *pcVideoSkipOffset;
+@property (nonatomic, readonly) NSString *pcVideoSkipOffsetPercentage;
 @property (nonatomic, readonly) NSNumber *bcVideoSkipOffset;
+@property (nonatomic, readonly) NSString *bcVideoSkipOffsetPercentage;
 @property (nonatomic, readonly) NSNumber *rewardedHtmlSkipOffset;
 @property (nonatomic, readonly) NSNumber *pcRewardedHtmlSkipOffset;
 @property (nonatomic, readonly) NSNumber *rewardedVideoSkipOffset;
+@property (nonatomic, readonly) NSString *rewardedVideoSkipOffsetPercentage;
 @property (nonatomic, readonly) NSNumber *pcRewardedVideoSkipOffset;
+@property (nonatomic, readonly) NSString *pcRewardedVideoSkipOffsetPercentage;
 @property (nonatomic, readonly) NSNumber *bcRewardedVideoSkipOffset;
+@property (nonatomic, readonly) NSString *bcRewardedVideoSkipOffsetPercentage;
 @property (nonatomic, readonly) NSNumber *endcardCloseDelay;
 @property (nonatomic, readonly) NSNumber *pcEndcardCloseDelay;
 @property (nonatomic, readonly) NSNumber *bcEndcardCloseDelay;
@@ -127,17 +132,12 @@ typedef enum : NSUInteger {
 @property (nonatomic, readonly) NSNumber *customCtaEnabled;
 @property (nonatomic, readonly) NSNumber *sdkAutoStorekitEnabled;
 @property (nonatomic, readonly) NSNumber *pcSDKAutoStorekitEnabled;
-@property (nonatomic, readonly) NSNumber *atomEnabled;
+@property (nonatomic, readonly) NSNumber *suppressAutoClick;
 
 // Reporting Properties:
 @property (nonatomic, assign) BOOL shouldReportCustomEndcardImpression;
 
 - (instancetype)initWithData:(HyBidAdModel *)data withZoneID:(NSString *)zoneID;
-
-#if __has_include(<ATOM/ATOM-Swift.h>)
-- (instancetype)initWithData:(HyBidAdModel *)data withZoneID:(NSString *)zoneID withCohorts:(NSArray<NSString *> *)cohorts;
-- (instancetype)initOpenRTBWithData:(HyBidAdModel *)data withZoneID:(NSString *)zoneID withCohorts:(NSArray<NSString *> *)cohorts;
-#endif
 
 - (instancetype)initOpenRTBWithData:(HyBidAdModel *)data withZoneID:(NSString *)zoneID;
 - (instancetype)initWithAssetGroup:(NSInteger)assetGroup withAdContent:(NSString *)adContent withAdType:(NSInteger)adType;
